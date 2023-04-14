@@ -33,9 +33,9 @@ class DB:
             CHROMADB | Heartbeat: 200
             200
         """
-        h = self.client.heartbeat()
-        log.info(f'CHROMADB | Heartbeat: {h}')
-        return h
+        heartbeat = self.client.heartbeat()
+        log.info(f'CHROMADB | Heartbeat: {heartbeat}')
+        return heartbeat
 
     def add_guild(self, guild_id: str, guild_name: str):
         """
@@ -105,20 +105,20 @@ class DB:
             f'CHROMADB | Purged guild: {collection.metadata["name"]}, {guild_id}')
         collection.delete()
 
-    def add_datas(self, guild_id: str, msg_content: list[str], message_id: int, author_id: list[str], is_bot: bool, # todo check this
-                  has_embed: bool, author_name: list[str], channel_id: list[str], channel_name: list[str],
-                  timestamp: list[str], num_attachments: list[str or None], mentions: list[list or None],
-                  context: list[str or None]) -> None:
+    def add_data(self, guild_id: str, msg_content: list[str or None], message_id: list[int], author_id: list[str],
+                 is_bot: list[bool], has_embed: list[bool], author_name: list[str], channel_id: list[str],
+                 channel_name: list[str], timestamp: list[str], num_attachments: list[str or None],
+                 mentions: list[list or None], context: list[str or None]) -> None:
         """
         Adds data to the specified guild's collection.
 
         Args:
             guild_id (str): The ID of the guild to add data to.
-            msg_content (list[str]): A list of message contents to add.
-            message_id (list[str]): A list of message IDs to add.
+            msg_content (list[str or None]): A list of message contents to add.
+            message_id (list[str or int]): A list of message IDs to add.
             author_id (list[str]): A list of author IDs to add.
-            is_bot (bool): A boolean representing whether the message was sent by a bot.
-            has_embed (bool): A boolean representing whether the message has an embed.
+            is_bot (list[bool]): A boolean representing whether the message was sent by a bot.
+            has_embed (list[bool]): A boolean representing whether the message has an embed.
             author_name (list[str]): A list of author names to add.
             channel_id (list[str]): A list of channel IDs to add.
             channel_name (list[str]): A list of channel names to add.
@@ -143,16 +143,15 @@ class DB:
         len_ = len(author_id)
 
         documents = []
-        metadata = []   # todo why tf is everything a list nived fix
+        metadata = []
         ids = []
         for i in range(len_):
             documents.append(msg_content[i] if msg_content[i] is not None else "000")
             metadata.append({
-                'message_id': message_id,
                 'author_id': author_id[i],
                 'author_name': author_name[i],
-                'is_bot': is_bot,
-                'has_embed': has_embed,
+                'is_bot': is_bot[i],
+                'has_embed': has_embed[i],
                 'channel_id': channel_id[i],
                 'channel_name': channel_name[i],
                 'timestamp': timestamp[i],
@@ -160,7 +159,7 @@ class DB:
                 'mentions': ",".join(mentions[i]) if mentions[i] is not None else "000",
                 'context': context[i] if context[i] is not None else "000"
             })
-            ids.append(msg_id[i])
+            ids.append(message_id[i])
 
             log.info(
                 f'CHROMADB | Added message to {collection.metadata["name"]}: {message_id}')
