@@ -20,12 +20,34 @@ class DB:
         )
 
     def heartbeat(self) -> int:
+        """
+        Sends a heartbeat request to the client and returns the response.
+
+        Returns:
+            int: The heartbeat response from the client.
+
+        Example:
+            >>> db = Database()
+            >>> db.connect()
+            >>> db.heartbeat()
+            CHROMADB | Heartbeat: 200
+            200
+        """
         h = self.client.heartbeat()
         log.info(f'CHROMADB | Heartbeat: {h}')
         return h
 
-    def add_guild(self, guild_id: str, guild_name: str) -> chromadb.api.models.Collection.Collection:
-        """Adds a guild to the database (as a collection). Note: collection name is guild.id to avoid collisions."""
+    def add_guild(self, guild_id: str, guild_name: str):
+        """
+        Creates a new collection with the given guild ID and name.
+
+        Args:
+            guild_id (str): A string representing the ID of the guild to add.
+            guild_name (str): A string representing the name of the guild to add.
+
+        Returns:
+            chromadb.api.models.Collection.Collection: A Collection object representing the newly created collection.
+        """
         collection = self.client.create_collection(
             name=guild_id, metadata={
                 'name': guild_name
@@ -35,21 +57,48 @@ class DB:
         return collection
 
     def remove_guild(self, guild_id: str):
-        """Removes a guild from the database (as a collection)."""
+        """
+        Remove a guild from the database.
+
+        Args:
+            guild_id (str): The ID of the guild to remove.
+
+        Returns:
+            None.
+        """
         collection = self.client.get_collection(guild_id)
         self.client.delete_collection(guild_id)
         log.info(
             f'CHROMADB | Removed guild: {collection.metadata["name"]}, {guild_id}')
 
-    def get_guild(self, guild_id: str) -> chromadb.api.models.Collection.Collection:
-        """Retrieves a guild from the database (as a collection)."""
+    def get_guild(self, guild_id: str):
+        """
+        Retrieves a guild's collection from the client.
+
+        Args:
+            guild_id (str): The ID of the guild to retrieve.
+
+        Returns:
+            The collection for the specified guild.
+        """
         collection = self.client.get_collection(guild_id)
         log.info(
             f'CHROMADB | Retrieved guild: {collection.metadata["name"]}, {guild_id}')
         return collection
 
     def purge_guild(self, guild_id):
-        """Removes all messages from a guild."""
+        """
+        Delete all data associated with the specified guild ID.
+
+        Args:
+            guild_id (int): The ID of the guild to purge.
+
+        Returns:
+            None.
+
+        Raises:
+            KeyError: If the guild ID is not found in the database.
+        """
         collection = self.get_guild(guild_id)
 
         # delete all the data in the guild
@@ -58,10 +107,28 @@ class DB:
         collection.delete()
 
     def add_datas(self, guild_id: str, msg_content: list[str], msg_id: list[str], author_id: list[str], author_name: list[str], channel_id: list[str], channel_name: list[str], timestamp: list[str], num_attachments: list[str or None], mentions: list[list or None], context: list[str or None]) -> None:
-        """Adds data to a guild, given guild and a list of messages."""
+        """
+        Adds data to the specified guild's collection.
+
+        Args:
+            guild_id (str): The ID of the guild to add data to.
+            msg_content (list[str]): A list of message contents to add.
+            msg_id (list[str]): A list of message IDs to add.
+            author_id (list[str]): A list of author IDs to add.
+            author_name (list[str]): A list of author names to add.
+            channel_id (list[str]): A list of channel IDs to add.
+            channel_name (list[str]): A list of channel names to add.
+            timestamp (list[str]): A list of timestamps to add.
+            num_attachments (list[str or None]): A list of attachment counts to add.
+            mentions (list[list or None]): A list of mention lists to add.
+            context (list[str or None]): A list of contextual data to add.
+
+        Returns:
+            None: No return value.
+        """
         collection = self.get_guild(guild_id)
 
-        # check if all the lenghts are equal
+        # check if all the lengths are equal
         if len(author_id) != len(author_name) or len(channel_id) != len(channel_name) or len(timestamp) != len(num_attachments) or len(mentions) != len(context):
             log.error(
                 f'CHROMADB | Error: {len(author_id)}, {len(author_name)}, {len(channel_id)}, {len(channel_name)}, {len(timestamp)}, {len(num_attachments)}, {len(mentions)}, {len(context)}')
@@ -122,7 +189,27 @@ class DB:
             f'CHROMADB | Retrieved messages from {collection.metadata["name"]}, {author_id}')
         return collection.get(where={"author_id": author_id})['documents']
 
-    def most_used_words(self, guild_id: str, author_id: str, n: int = 10) -> list[tuple[str, int]]:
+    def most_used_words_by_guild(self, guild_id: str, n: int = 10) -> list[tuple[str, int]]:
+        """Return the `n` most common words used in the guild with ID `guild_id`.
+
+        Args:
+            guild_id (str): The ID of the guild to retrieve data from.
+            n (int): The number of most common words to return. Default is 10.
+
+        Returns:
+            A list of tuples, where each tuple contains a string representing a word and an integer representing its frequency.
+        """
+
+        messages = self.get_all_messages_from_guild(guild_id)
+        words = all_valid_words(messages)
+
+        freq = collections.Counter(words)
+
+        log.info(
+            f'CHROMADB | Retrieved most used words from `{guild_id}`')
+        return freq.most_common(n)
+
+    def most_used_words_by_author(self, guild_id: str, author_id: str, n: int = 10) -> list[tuple[str, int]]:
         """Retrieves all the most used words in a guild pertaining to a certian author and returns them in a list."""
         messages = self.get_all_messages_from_author(guild_id, author_id)
 
@@ -197,3 +284,110 @@ class DB:
         author_with_max_count = [
             k for k, v in mentions_count.items() if v == max_count][0]
         return author_with_max_count, max_count
+
+    def message_count_by_guild(self, guild_id: str) -> int:
+        """
+        Returns the number of messages sent in the given guild.
+
+        Args:
+            guild_id (str): The ID of the guild to count messages in.
+
+        Returns:
+            int: The number of messages sent in the guild with the given ID.
+        """
+        log.info(f"CHROMADB | Retrieved message count from `{guild_id}`")
+        return self.get_all_messages_from_guild(guild_id)
+
+    def message_count_by_author(self, guild_id: str, author_id: str) -> int:
+        """
+        Returns the number of messages sent by the specified author in the specified guild.
+
+        Args:
+            guild_id (str): The ID of the guild to search in.
+            author_id (str): The ID of the author to search for.
+
+        Returns:
+            int: The number of messages sent by the specified author in the specified guild.
+        """
+        log.info(
+            f"CHROMADB | Retrieved message count from `{guild_id}`, {author_id}")
+        return self.get_all_messages_from_author(guild_id, author_id)
+
+    def most_active_channel_by_guild(self, guild_id: str) -> tuple[str, int]:
+        """
+        Returns the ID of the most active channel in the given guild.
+
+        Args:
+            guild_id (str): The ID of the guild to search for the most active channel in.
+
+        Returns:
+            tuple[str, int]: The ID of the most active channel in the given guild and the number of messages in that channel.
+        """
+
+        _, metadatas = self._get_documents_and_metadata(guild_id)
+
+        channel_count = {}
+        for metadata in metadatas:
+            try:
+                channel_count[metadata['channel_id']] += 1
+            except KeyError:
+                channel_count[metadata['channel_id']] = 1
+
+        max_count = max(channel_count.values())
+        author_with_max_count = [
+            k for k, v in channel_count.items() if v == max_count][0]
+
+        log.info(
+            f'CHROMADB | Retrieved most active channel from {guild_id}')
+        return author_with_max_count, max_count
+
+    def most_active_channel_by_author(self, guild_id: str, author_id: str) -> tuple[str, int]:
+        """
+        Get the most active channel by a specific author in a guild.
+
+        Args:
+            guild_id (str): The ID of the guild to search for.
+            author_id (str): The ID of the author to search for.
+
+        Returns:
+            A tuple containing the name of the most active channel and the number of messages sent.
+        """
+        collection = self.get_guild(guild_id)
+
+        filtered_metadatas = collection.get(
+            where={
+                "author_id": author_id,
+            }
+        )
+
+        channel_count = {}
+        for metadata in filtered_metadatas:
+            try:
+                channel_count[metadata['channel_id']] += 1
+            except KeyError:
+                channel_count[metadata['channel_id']] = 1
+
+        max_count = max(channel_count.values())
+        author_with_max_count = [
+            k for k, v in channel_count.items() if v == max_count][0]
+
+        log.info(
+            f'CHROMADB | Retrieved most active channel from {guild_id}, {author_id}')
+        return author_with_max_count, max_count
+
+    def top_n_users(self, guild_id: str, type_: str) -> None:
+        """
+        Returns the top N users in a guild based on the specified type.
+
+        Args:
+            guild_id (str): The ID of the guild.
+            type (str): The type of metric to use when calculating the top users. Can be "messages",
+                "words", or "characters".
+
+        Returns:
+            None
+        """
+
+        messages, metadatas = self._get_documents_and_metadata(guild_id)
+
+        # TODO
