@@ -5,7 +5,7 @@ from fastapi import FastAPI, HTTPException
 from starlette.responses import JSONResponse
 
 import backend.db_manager as db_manager
-from .config import DataTemplate
+from config import DataTemplate
 
 error_response = {
     "http_status": 500,

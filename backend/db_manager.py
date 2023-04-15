@@ -18,14 +18,8 @@ def heartbeat() -> int:
 
     Returns:
         int: The heartbeat response from the client.
-
-    Example:
-        >>> db = Database()
-        >>> db.connect()
-        >>> db.heartbeat()
-        CHROMADB | Heartbeat: 200
-        200
     """
+
     heartbeat = client.heartbeat()
     log.info(f'CHROMADB | Heartbeat: {heartbeat}')
     return heartbeat
@@ -276,7 +270,7 @@ def top_mentions_by_author(guild_id: str or int, author_id: str or int, amount: 
     return freq.most_common(amount)[0]  # todo test
 
 
-def top_mentioned_by(guild_id: str or int, author_id: str or int, amount: int) -> tuple[str, int]:
+def top_mentioned_by(guild_id: str or int, author_id: str or int, amount: int) -> list[tuple[str, int]]:
     """Retrieves the user that has most mentioned the author and the number of times mentioned."""
     collection = get_guild(guild_id)
 
@@ -368,12 +362,13 @@ def user_message_count(guild_id: str or int, author_id: str or int) -> int:
     return len(get_all_messages_from_user(guild_id, author_id))
 
 
-def top_n_channels(guild_id: str or int, amount: int) -> tuple[str, int]:  
+def top_n_channels(guild_id: str or int, amount: int) -> list[tuple]:
     """
     Returns the ID of the most active channel in the given guild.
 
     Args:
         guild_id (str or int): The ID of the guild to search for the most active channel in.
+        amount (int): The number of channels to return.
 
     Returns: tuple[str, int]: The ID of the most active channel in the given guild and the number of messages in
     that channel.
@@ -388,22 +383,22 @@ def top_n_channels(guild_id: str or int, amount: int) -> tuple[str, int]:
             channel_count[metadata['channel_id']] += 1
         except KeyError:
             channel_count[metadata['channel_id']] = 1
-    
+
     channel_count = sorted(channel_count.items(), key=lambda x: x[1], reverse=True)
-    
+
     log.info(f'CHROMADB | Retrieved most active channel from {guild_id}')
-    
+
     return channel_count[:amount] if amount < len(channel_count) else channel_count
 
 
-def top_n_channels_user(guild_id: str or int, author_id: str or int, amount: int) -> tuple[
-    str, int]:  
+def top_n_channels_user(guild_id: str or int, author_id: str or int, amount: int) -> list:
     """
     Get the most active channel by a specific author in a guild.
 
     Args:
         guild_id (str or int): The ID of the guild to search for.
         author_id (str or int): The ID of the author to search for.
+        amount (int): The amount of channels to return.
 
     Returns:
         A tuple containing the name of the most active channel and the number of messages sent.
@@ -429,9 +424,8 @@ def top_n_channels_user(guild_id: str or int, author_id: str or int, amount: int
     channel_count = sorted(channel_count.items(), key=lambda x: x[1], reverse=True)
 
     log.info(f'CHROMADB | Retrieved most active channel from {guild_id}, {author_id}')
-        
-    return channel_count[:amount] if amount < len(channel_count) else channel_count
 
+    return channel_count[:amount] if amount < len(channel_count) else channel_count
 
 
 def top_n_users(guild_id: str or int, type_: str, amount: int):
