@@ -301,12 +301,8 @@ def top_mentioned_by(guild_id: str or int, author_id: str or int, amount: int) -
         except KeyError:
             mentions_count[metadata['author_id']] = 1
 
-        # return the top n most mentioned users
-        # return key with the highest value in mentions_count
-        max_count = max(mentions_count.values())
-        author_with_max_count = [
-            k for k, v in mentions_count.items() if v == max_count][0]
-        return author_with_max_count, max_count  # todo make it respect `amount`
+    mentions_count = sorted(mentions_count.items(), key=lambda x: x[1], reverse=True)
+    return mentions_count[:amount] if mentions_count > amount else mentions_count
 
 
 def total_mentioned_by(guild_id: str or int, author_id: str or int) -> int:  # todo test this, it's probably broken
@@ -372,7 +368,7 @@ def user_message_count(guild_id: str or int, author_id: str or int) -> int:
     return len(get_all_messages_from_user(guild_id, author_id))
 
 
-def top_n_channels(guild_id: str or int, amount: int) -> tuple[str, int]:  # todo respect amount
+def top_n_channels(guild_id: str or int, amount: int) -> tuple[str, int]:  
     """
     Returns the ID of the most active channel in the given guild.
 
@@ -392,18 +388,16 @@ def top_n_channels(guild_id: str or int, amount: int) -> tuple[str, int]:  # tod
             channel_count[metadata['channel_id']] += 1
         except KeyError:
             channel_count[metadata['channel_id']] = 1
-
-    max_count = max(channel_count.values())
-    author_with_max_count = [
-        k for k, v in channel_count.items() if v == max_count][0]
-
-    log.info(
-        f'CHROMADB | Retrieved most active channel from {guild_id}')
-    return author_with_max_count, max_count
+    
+    channel_count = sorted(channel_count.items(), key=lambda x: x[1], reverse=True)
+    
+    log.info(f'CHROMADB | Retrieved most active channel from {guild_id}')
+    
+    return channel_count[:amount] if amount < len(channel_count) else channel_count
 
 
 def top_n_channels_user(guild_id: str or int, author_id: str or int, amount: int) -> tuple[
-    str, int]:  # todo respect amount
+    str, int]:  
     """
     Get the most active channel by a specific author in a guild.
 
@@ -432,13 +426,12 @@ def top_n_channels_user(guild_id: str or int, author_id: str or int, amount: int
         except KeyError:
             channel_count[metadata['channel_id']] = 1
 
-    max_count = max(channel_count.values())
-    author_with_max_count = [
-        k for k, v in channel_count.items() if v == max_count][0]
+    channel_count = sorted(channel_count.items(), key=lambda x: x[1], reverse=True)
 
-    log.info(
-        f'CHROMADB | Retrieved most active channel from {guild_id}, {author_id}')
-    return author_with_max_count, max_count
+    log.info(f'CHROMADB | Retrieved most active channel from {guild_id}, {author_id}')
+        
+    return channel_count[:amount] if amount < len(channel_count) else channel_count
+
 
 
 def top_n_users(guild_id: str or int, type_: str, amount: int):
