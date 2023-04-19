@@ -1,7 +1,7 @@
 # db_manager.py
 
 import chromadb
-from ..config import settings, DataTemplate
+from config import settings, DataTemplate
 
 import collections
 import itertools
