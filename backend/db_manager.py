@@ -25,6 +25,18 @@ def heartbeat() -> int:
     return heartbeat
 
 
+def get_all_guids() -> list[str]:
+    """
+    Returns a list of all the guild IDs in the database.
+
+    Returns:
+        list[str]: A list of all the guild IDs in the database.
+    """
+
+    guilds = client.list_collections()
+    return guilds
+
+
 def add_guild(guild_id: str or int, guild_name: str):
     """
     Creates a new collection with the given guild ID and name.
