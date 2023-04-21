@@ -1,16 +1,11 @@
 import copy
-import fastapi
-import uvicorn
+from fastapi import Depends
+import fastapi.security
 from fastapi import FastAPI, HTTPException
 from starlette.responses import JSONResponse
 
 import backend.db_manager as db_manager
-from config import DataTemplate
-
-error_response = {
-    "http_status": 500,
-    "error": "Internal Server Error"
-}
+from config import DataTemplate, api_keys
 
 success_response = {
     "http_status": 200,
