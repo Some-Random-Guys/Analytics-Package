@@ -150,7 +150,7 @@ def add_data(guild_id: str or int, data: DataTemplate) -> None:
             'has_embed': data.has_embed[i],
             'channel_id': data.channel_id[i],
             'timestamp': data.timestamp[i],
-            'num_attachments': data.num_attachments[i] if data.num_attachments[i] is not None else "{{{nOnE}}}",
+            'num_attachments': data.num_attachments[i] if data.num_attachments[i] is not None else 0, # todo test
             'mentions': ",".join(data.mentions[i]) if data.mentions[i] is not None else "{{{nOnE}}}",
             'context': data.context[i] if data.context[i] is not None else "{{{nOnE}}}"
         })
@@ -479,3 +479,15 @@ def top_n_emojis(guild_id: str or int, amount: int):
     guild_id = str(guild_id)
 
     # TODO make this, and respect amount
+
+def clear_db():
+    """
+    Clears the entire database.
+
+    Returns:
+        None
+    """
+
+    # delete all collections
+    # todo
+    pass
