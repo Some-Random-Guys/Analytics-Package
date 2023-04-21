@@ -3,7 +3,7 @@ from backend.MAT.helpers import remove_non_alpha, remove_stopwords
 
 
 def all_valid_words(messages: list, stopwords=None) -> list[str]:
-    """Given a list of messages, returns a list of all valid words, based on disocrd data."""
+    """Given a list of messages, returns a list of all valid words, based on discord data."""
     valid_words = []
     for sentence in messages:
         # if it is empty
@@ -26,6 +26,10 @@ def all_valid_words(messages: list, stopwords=None) -> list[str]:
         for word in sentence:
             # if it is a mention
             if sentence[0:2] == "<@":
+                continue
+
+            # if it's a code block
+            if sentence[0:3] == "```" or sentence[-3:] == '```':
                 continue
 
             if len(word) <= 1:
