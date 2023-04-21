@@ -37,13 +37,13 @@ def get_all_guids() -> list[str]:
     return guilds
 
 
-def add_guild(guild_id: str or int, guild_name: str):
+def add_guild(guild_id: str or int):
     """
     Creates a new collection with the given guild ID and name.
 
     Args:
         guild_id (str or int): A string representing the ID of the guild to add.
-        guild_name (str): A string representing the name of the guild to add.
+        # guild_name (str): A string representing the name of the guild to add.
 
     Returns:
         chromadb.api.models.Collection.Collection: A Collection object representing the newly created collection.
@@ -51,10 +51,10 @@ def add_guild(guild_id: str or int, guild_name: str):
     guild_id = str(guild_id)
     collection = client.create_collection(
         name=guild_id, metadata={
-            'name': guild_name
+            # 'name': guild_name
         }
     )
-    log.info(f'CHROMADB | Added guild: {guild_name}, {guild_id}')
+    log.info(f'CHROMADB | Added guild: {guild_id}')
     return collection
 
 
