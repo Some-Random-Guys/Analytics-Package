@@ -10,6 +10,8 @@ from starlette.responses import JSONResponse
 import backend.db_manager as db_manager
 from config import DataTemplate, api_keys
 
+from backend.logging_ import log
+
 success_response = {
     "http_status": 200,
 }
@@ -19,7 +21,7 @@ app = FastAPI(
     description="An API which acts as the backend for a SRG Analytics Discord bot.",
     version="1.0.0",
     docs_url="/docs",
-    openapi_prefix="/v1"
+    root_path="/v1"
 
 )
 
@@ -55,17 +57,17 @@ def admin_api_auth(api_key: str = Depends(oauth2_scheme)):
 
 @app.exception_handler(500)
 async def handler_500(err, e):
-    error_content = copy.deepcopy(error_response)
-    error_content["error"] = str(err)
-    return JSONResponse(content=error_content, status_code=500)
+    return JSONResponse(status_code=500, content={"http_status": 500, "error": "Internal Server Error"})
+
+
+@app.exception_handler(401)
+async def handler_401(err, e):
+    return JSONResponse(status_code=401, content={"http_status": 401, "error": "Unauthorized"})
 
 
 @app.exception_handler(404)
 async def handler_404(err, e):
-    error_content = copy.deepcopy(error_response)
-    error_content['http_status'] = 404
-    error_content["error"] = "Not Found"
-    return JSONResponse(content=error_content, status_code=404)
+    return JSONResponse(status_code=404, content={"http_status": 404, "error": "Not Found"})
 
 
 @app.get("/")
@@ -87,14 +89,14 @@ async def get_all_guids():
     return return_list
 
 
-@app.post("/db/guilds/", dependencies=[Depends(edit_api_auth)])
+@app.post("/db/guilds", dependencies=[Depends(edit_api_auth)])
 async def add_guild(guild_id: int):
     return_list = copy.deepcopy(success_response)
 
     try:
         return_list["data"] = db_manager.add_guild(guild_id)
     except requests.exceptions.HTTPError:
-        return JSONResponse(status_code=409, content={"http_status": 109, "error": "Guild already exists"})
+        return JSONResponse(status_code=409, content={"http_status": 409, "error": "Guild already exists"})
     return return_list
 
 
