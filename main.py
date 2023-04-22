@@ -1,4 +1,7 @@
 import copy
+import logging
+
+import requests
 from fastapi import Depends
 import fastapi.security
 from fastapi import FastAPI, HTTPException
@@ -15,7 +18,35 @@ app = FastAPI(
     title="SRG Analytics API",
     description="An API which acts as the backend for a SRG Analytics Discord bot.",
     version="1.0.0",
+    docs_url="/docs",
+    openapi_prefix="/v1"
+
 )
+
+oauth2_scheme = fastapi.security.OAuth2PasswordBearer(tokenUrl="token")  # use token authentication
+
+
+def check_key(api_key, level):
+    print(api_key)
+    if api_key in api_keys[level] or api_key in api_keys['admin']:
+        return True
+    else:
+        return False
+
+
+def view_api_auth(api_key: str = Depends(oauth2_scheme)):
+    if not check_key(api_key, 'view'):
+        raise HTTPException(status_code=401)
+
+
+def edit_api_auth(api_key: str = Depends(oauth2_scheme)):
+    if not check_key(api_key, 'edit'):
+        raise HTTPException(status_code=401)
+
+
+def admin_api_auth(api_key: str = Depends(oauth2_scheme)):
+    if not check_key(api_key, 'admin'):
+        raise HTTPException(status_code=401)
 
 
 #
@@ -49,66 +80,84 @@ async def root():
 #   Method Bindings: ./backend/db_manager.py
 #
 
-@app.get("/db/get_all_guilds")
-async def heartbeat():
+@app.get("/db/guilds", dependencies=[Depends(view_api_auth)])
+async def get_all_guids():
     return_list = copy.deepcopy(success_response)
-
-    return_list["data"] = db_manager.heartbeat()
+    return_list["data"] = db_manager.get_all_guids()
     return return_list
 
 
-@app.post("/db/{guild_id}/add")
+@app.post("/db/guilds/", dependencies=[Depends(edit_api_auth)])
 async def add_guild(guild_id: int):
     return_list = copy.deepcopy(success_response)
 
-    return_list["data"] = db_manager.add_guild(guild_id)
+    try:
+        return_list["data"] = db_manager.add_guild(guild_id)
+    except requests.exceptions.HTTPError:
+        return JSONResponse(status_code=409, content={"http_status": 109, "error": "Guild already exists"})
     return return_list
 
 
-@app.delete("/db/{guild_id}")
+@app.delete("/db/guilds/{guild_id}", dependencies=[Depends(edit_api_auth)])
 async def remove_guild(guild_id: int):
     return_list = copy.deepcopy(success_response)
 
-    return_list["data"] = db_manager.remove_guild(guild_id)
+    try:
+        return_list["data"] = db_manager.remove_guild(guild_id)
+    except ValueError:
+        raise HTTPException(status_code=404)
     return return_list
 
 
-@app.get("/db/{guild_id}")
+@app.get("/db/guilds/{guild_id}", dependencies=[Depends(view_api_auth)])
 async def get_guild(guild_id: int):
     return_list = copy.deepcopy(success_response)
 
-    return_list["data"] = db_manager.get_guild(guild_id)
+    try:
+        resp = db_manager.get_guild(guild_id)
+    except ValueError:
+        raise HTTPException(status_code=404)
+
+    return_list["data"] = resp
     return return_list
 
 
-@app.post("/db/{guild_id}/purge")
+@app.post("/db/guilds/{guild_id}/purge", dependencies=[Depends(edit_api_auth)])
 async def purge_guild(guild_id: int):
     return_list = copy.deepcopy(success_response)
 
-    return_list["data"] = db_manager.purge_guild(guild_id)
+    try:
+        return_list["data"] = db_manager.purge_guild(guild_id)
+    except ValueError:
+        raise HTTPException(status_code=404)
     return return_list
 
 
-@app.post("/db/{guild_id}/add_data")
+@app.post("/db/guilds/{guild_id}", dependencies=[Depends(edit_api_auth)])
 async def add_data(guild_id: int, data: DataTemplate):
     return_list = copy.deepcopy(success_response)
 
-    db_manager.add_data(guild_id, data)
+    try:
+        db_manager.add_data(guild_id, data)
+    except ValueError:
+        raise HTTPException(status_code=404)
     return return_list
 
 
-@app.get("/db/{guild_id}/get_data/{author_id}")
+@app.get("/db/guilds/{guild_id}/messages/{author_id}", dependencies=[Depends(view_api_auth)])
 async def get_data(guild_id: int, author_id: int = None):
     return_list = copy.deepcopy(success_response)
-
-    if author_id is None:
-        return_list["data"] = db_manager.get_all_messages_from_guild(guild_id)
-    else:
-        return_list["data"] = db_manager.get_all_messages_from_user(guild_id, author_id)
+    try:
+        if author_id is None:
+            return_list["data"] = db_manager.get_all_messages_from_guild(guild_id)
+        else:
+            return_list["data"] = db_manager.get_all_messages_from_user(guild_id, author_id)
+    except ValueError:
+        raise HTTPException(status_code=404)
     return return_list
 
 
-@app.get("/db/{guild_id}/top/words/{amount}/{author_id}")
+@app.get("/db/guilds/{guild_id}/top/words/{author_id}/{amount}", dependencies=[Depends(view_api_auth)])
 async def get_top_words(guild_id: int, author_id: int = None, amount: int = 10):
     return_list = copy.deepcopy(success_response)
 
@@ -119,35 +168,35 @@ async def get_top_words(guild_id: int, author_id: int = None, amount: int = 10):
     return return_list
 
 
-@app.get("/db/{guild_id}/mentions/{author_id}")
-async def get_top_mentions(guild_id: int, author_id: int):
+@app.get("/db/guilds/{guild_id}/mentions/{author_id}", dependencies=[Depends(view_api_auth)])
+async def get_total_mentions(guild_id: int, author_id: int):
     return_list = copy.deepcopy(success_response)
     return_list["data"] = db_manager.total_mentions_by_author(guild_id, author_id)
     return return_list
 
 
-@app.get("/db/{guild_id}/mentions/{author_id}/{amount}")
+@app.get("/db/guilds/{guild_id}/top/mentions/{author_id}/{amount}", dependencies=[Depends(view_api_auth)])
 async def get_top_mentions(guild_id: int, author_id: int, amount: int = 10):
     return_list = copy.deepcopy(success_response)
     return_list["data"] = db_manager.top_mentions_by_author(guild_id, author_id, amount)
     return return_list
 
 
-@app.get("/db/{guild_id}/mentioned/{author_id}")
-async def get_top_mentioned(guild_id: int, author_id: int):
+@app.get("/db/guilds/{guild_id}/mentioned/{author_id}", dependencies=[Depends(view_api_auth)])
+async def get_total_mentioned(guild_id: int, author_id: int):
     return_list = copy.deepcopy(success_response)
     return_list["data"] = db_manager.total_mentioned_by(guild_id, author_id)
     return return_list
 
 
-@app.get("/db/{guild_id}/mentioned/{author_id}/{amount}")
+@app.get("/db/guilds/{guild_id}/top/mentioned/{author_id}/{amount}", dependencies=[Depends(view_api_auth)])
 async def get_top_mentioned(guild_id: int, author_id: int, amount):
     return_list = copy.deepcopy(success_response)
     return_list["data"] = db_manager.top_mentioned_by(guild_id, author_id, amount)
     return return_list
 
 
-@app.get("/db/{guild_id}/message_count/{author_id}")
+@app.get("/db/guilds/{guild_id}/message_count/{author_id}", dependencies=[Depends(view_api_auth)])
 async def get_message_count(guild_id: int, author_id: int = None):
     return_list = copy.deepcopy(success_response)
     if author_id is None:
@@ -158,7 +207,7 @@ async def get_message_count(guild_id: int, author_id: int = None):
     return return_list
 
 
-@app.get("/db/{guild_id}/top/channels/{amount}/{author_id}")
+@app.get("/db/guilds/{guild_id}/top/channels/{amount}/{author_id}", dependencies=[Depends(view_api_auth)])
 async def get_top_channels(guild_id: int, author_id: int = None, amount: int = 10):
     return_list = copy.deepcopy(success_response)
 
@@ -169,21 +218,28 @@ async def get_top_channels(guild_id: int, author_id: int = None, amount: int = 1
     return return_list
 
 
-@app.get("/db/{guild_id}/top/emojis/{amount}/{author_id}")
+@app.get("/db/guilds/{guild_id}/top/emojis/{amount}/{author_id}", dependencies=[Depends(view_api_auth)])
 async def get_top_emojis(guild_id: int, author_id: int = None, amount: int = 10):
     # TODO backend is not ready yet
     pass
 
 
-@app.get("/db/{guild_id}/top/users/{type}/{amount}")
+@app.get("/db/guilds/{guild_id}/top/users/{type}/{amount}", dependencies=[Depends(view_api_auth)])
 async def get_top_users(guild_id: int, type_: str, amount: int = 10):
     if type_ not in ["messages", "words", "characters"]:
-        return_list = copy.deepcopy(error_response)
-        return_list["data"] = "Invalid type. Please refer to the documentation."
-        return return_list
+        raise HTTPException(status_code=400, detail="Invalid type.")
 
     return_list = copy.deepcopy(success_response)
 
     return_list["data"] = db_manager.top_n_users(guild_id, type_, amount)
+
+    return return_list
+
+
+@app.delete("/db/guilds", dependencies=[Depends(admin_api_auth)])
+async def clear_db():
+    return_list = copy.deepcopy(success_response)
+
+    db_manager.clear_db()
 
     return return_list
