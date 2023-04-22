@@ -29,3 +29,11 @@ class DataTemplate(BaseModel):
     context: list[str]
     message_content: list[str or None]
     message_id: list[str or int]
+
+
+api_keys = {
+    "view": ['123'],
+    "edit": ['123'],
+    "admin": ['123']
+}
+
