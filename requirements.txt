@@ -1,6 +1,0 @@
-starlette==0.26.1
-uvicorn==0.21.1
-fastapi==0.95.1
-chromadb==0.3.21
-colorlog==6.7.0
-validators==0.20.0
