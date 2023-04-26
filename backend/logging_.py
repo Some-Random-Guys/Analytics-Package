@@ -1,9 +1,5 @@
-import os
-import datetime
-
 import logging
 from logging.handlers import TimedRotatingFileHandler
-from colorlog import ColoredFormatter
 from pydantic import BaseModel
 from logging.config import dictConfig
 

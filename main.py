@@ -135,7 +135,7 @@ async def purge_guild(guild_id: int):
     return return_list
 
 
-@app.post("/db/guilds/{guild_id}", dependencies=[Depends(edit_api_auth)])
+@app.patch("/db/guilds/{guild_id}", dependencies=[Depends(edit_api_auth)])
 async def add_data(guild_id: int, data: DataTemplate):
     return_list = copy.deepcopy(success_response)
 
@@ -146,14 +146,22 @@ async def add_data(guild_id: int, data: DataTemplate):
     return return_list
 
 
+@app.get("/db/guilds/{guild_id}/messages", dependencies=[Depends(view_api_auth)])
+async def get_data(guild_id: int):
+    return_list = copy.deepcopy(success_response)
+
+    try:
+        return_list["data"] = db_manager.get_all_messages_from_guild(guild_id)
+    except ValueError:
+        raise HTTPException(status_code=404)
+    return return_list
+
+
 @app.get("/db/guilds/{guild_id}/messages/{author_id}", dependencies=[Depends(view_api_auth)])
-async def get_data(guild_id: int, author_id: int = None):
+async def get_data_from_author(guild_id: int, author_id: int):
     return_list = copy.deepcopy(success_response)
     try:
-        if author_id is None:
-            return_list["data"] = db_manager.get_all_messages_from_guild(guild_id)
-        else:
-            return_list["data"] = db_manager.get_all_messages_from_user(guild_id, author_id)
+        return_list["data"] = db_manager.get_all_messages_from_user(guild_id, author_id)
     except ValueError:
         raise HTTPException(status_code=404)
     return return_list

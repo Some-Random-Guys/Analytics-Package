@@ -74,7 +74,7 @@ def remove_guild(guild_id: str or int):
 
     client.delete_collection(guild_id)
 
-    log.info(f'CHROMADB | Removed guild: {collection.metadata["name"]}, {guild_id}')
+    log.info(f'CHROMADB | Removed guild: `{collection.name}`, {guild_id}')
 
 
 def get_guild(guild_id: str or int):
@@ -91,7 +91,7 @@ def get_guild(guild_id: str or int):
     guild_id = str(guild_id)
     collection = client.get_collection(guild_id)
     log.info(
-        f'CHROMADB | Retrieved guild: {collection.metadata["name"]}, {guild_id}')
+        f'CHROMADB | Retrieved guild: `{collection.name}`, {guild_id}')
     return collection
 
 
@@ -114,7 +114,7 @@ def purge_guild(guild_id: str or int):
 
     # delete all the data in the guild
     log.info(
-        f'CHROMADB | Purged guild: {collection.metadata["name"]}, {guild_id}')
+        f'CHROMADB | Purged guild: `{collection.name}`, {guild_id}')
     collection.delete()
 
 
@@ -157,7 +157,7 @@ def add_data(guild_id: str or int, data: DataTemplate) -> None:
         ids.append(data.message_id[i])
 
         log.info(
-            f'CHROMADB | Added message to {collection.metadata["name"]}: {data.message_id}')
+            f'CHROMADB | Added message to `{collection.name}`: {data.message_id}')
 
     collection.add(
         documents=documents,
@@ -199,7 +199,7 @@ def get_all_messages_from_user(guild_id: str or int, author_id: str or int) -> l
     collection = get_guild(guild_id)
 
     log.info(
-        f'CHROMADB | Retrieved messages from {collection.metadata["name"]}, {author_id}')
+        f'CHROMADB | Retrieved messages from `{collection.name}`, {author_id}')
     return collection.get(where={"author_id": author_id})['documents']
 
 
@@ -253,7 +253,7 @@ def get_mentions(guild_id: str, author_id: str) -> list:
     mentions = list(itertools.chain(*mentions))
 
     log.info(
-        f'CHROMADB | Retrieved mentions from {collection.metadata["name"]}, {author_id}')
+        f'CHROMADB | Retrieved mentions from `{collection.name}`, {author_id}')
     return mentions
 
 
