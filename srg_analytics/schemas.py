@@ -8,8 +8,19 @@ class DbCreds:
 
 
 class DataTemplate:
-    def __init__(self, author_id, is_bot, has_embed, channel_id, epoch, num_attachments, mentions, ctx_id,
-                 message_content, message_id):
+    def __init__(
+        self,
+        author_id,
+        is_bot,
+        has_embed,
+        channel_id,
+        epoch,
+        num_attachments,
+        mentions,
+        ctx_id,
+        message_content,
+        message_id,
+    ):
         self.message_id: int = message_id
         self.channel_id: int = channel_id
         self.author_id: int = author_id
@@ -20,4 +31,3 @@ class DataTemplate:
         self.num_attachments: int = num_attachments
         self.ctx_id = ctx_id
         self.mentions = mentions
-

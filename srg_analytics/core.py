@@ -1,4 +1,4 @@
-from .schemas import DbCreds, DataTemplate
+from srg_analytics.schemas import DbCreds, DataTemplate
 import mysql.connector as mysql
 
 
@@ -11,7 +11,7 @@ class DB:
             port=self.db_credentials.port,
             user=self.db_credentials.user,
             password=self.db_credentials.password,
-            database=self.db_credentials.name
+            database=self.db_credentials.name,
         )
 
         self.cur = self.con.cursor(prepared=True)
@@ -53,8 +53,8 @@ class DB:
                 data.is_bot,
                 data.num_attachments,
                 data.ctx_id,
-                data.mentions
-            )
+                data.mentions,
+            ),
         )
 
         self.con.commit()
@@ -77,7 +77,7 @@ class DB:
 
         return self.cur.fetchall()
 
-    def get_guilds(self):   # TODO TEST
+    def get_guilds(self):  # TODO TEST
         self.cur.execute(
             f"""
                         SHOW TABLES;
