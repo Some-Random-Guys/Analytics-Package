@@ -16,7 +16,7 @@ class DB:
 
         self.cur = self.con.cursor(prepared=True)
 
-    def add_guild(self, guild_id):
+    async def add_guild(self, guild_id):
         self.cur.execute(
             f"""
                         CREATE TABLE IF NOT EXISTS `{guild_id}` (
@@ -36,7 +36,7 @@ class DB:
 
         self.con.commit()
 
-    def add_message(self, guild_id, data: DataTemplate):
+    async def add_message(self, guild_id, data: DataTemplate):
         self.cur.execute(
             f"""
                         INSERT IGNORE INTO `{guild_id}` (message_id, channel_id, author_id, message_content, epoch, 
@@ -59,7 +59,7 @@ class DB:
 
         self.con.commit()
 
-    def remove_guild(self, guild_id):
+    async def remove_guild(self, guild_id):
         self.cur.execute(
             f"""
                         DROP TABLE IF EXISTS `{guild_id}`;
@@ -68,7 +68,7 @@ class DB:
 
         self.con.commit()
 
-    def get_guild(self, guild_id):
+    async def get_guild(self, guild_id):
         self.cur.execute(
             f"""
                         SELECT * FROM `{guild_id}`;
@@ -77,7 +77,7 @@ class DB:
 
         return self.cur.fetchall()
 
-    def get_guilds(self):  # TODO TEST
+    async def get_guilds(self):  # TODO TEST
         self.cur.execute(
             f"""
                         SHOW TABLES;
@@ -85,3 +85,21 @@ class DB:
         )
 
         return self.cur.fetchall()
+
+    async def get_message_content(self, guild_id, user_id=None):
+        if user_id:
+            self.cur.execute(
+                f"""
+                            SELECT message_content FROM `{guild_id}` WHERE author_id = {user_id};
+                        """
+            )
+        else:
+            self.cur.execute(
+                f"""
+                            SELECT message_content FROM `{guild_id}`;
+                        """
+            )
+
+        content = [i[0] for i in self.cur.fetchall()]
+
+        return content
