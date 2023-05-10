@@ -1,4 +1,4 @@
-from DB import DB
+from .DB import DB
 from collections import Counter
 
 

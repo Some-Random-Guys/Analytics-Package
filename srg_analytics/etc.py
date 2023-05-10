@@ -2,8 +2,8 @@ import random
 from wordcloud import WordCloud as wc
 import matplotlib.pyplot as plt
 import mplcyberpunk
-from helpers import most_used_words
-from DB import DB
+from .helpers import most_used_words
+from .DB import DB
 
 
 async def wordcloud(db: DB, guild_id: int, user_id: int = None):

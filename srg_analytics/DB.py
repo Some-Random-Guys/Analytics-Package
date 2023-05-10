@@ -1,10 +1,10 @@
-from srg_analytics.schemas import DbCreds, DataTemplate
+from .schemas import DbCreds, DataTemplate
 import mysql.connector as mysql
 
 
 class DB:
     def __init__(self, db_credentials: DbCreds):
-        self.db_credentials = db_credentials
+        self.db_credentials: DbCreds = db_credentials
 
         self.con = mysql.connect(
             host=self.db_credentials.host,
