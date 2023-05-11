@@ -36,6 +36,27 @@ class DB:
 
         self.con.commit()
 
+    async def remove_guild(self, guild_id):
+        self.cur.execute(
+            f"DROP TABLE IF EXISTS `{guild_id}`;"
+        )
+
+        self.con.commit()
+
+    async def get_guild(self, guild_id):
+        self.cur.execute(
+            f"SELECT * FROM `{guild_id}`;"
+        )
+
+        return self.cur.fetchall()
+
+    async def get_guilds(self):  # TODO TEST
+        self.cur.execute(
+            f"SHOW TABLES;"
+        )
+
+        return self.cur.fetchall()
+
     async def add_message(self, guild_id, data: DataTemplate):
         self.cur.execute(
             f"""
@@ -59,32 +80,9 @@ class DB:
 
         self.con.commit()
 
-    async def remove_guild(self, guild_id):
-        self.cur.execute(
-            f"""
-                        DROP TABLE IF EXISTS `{guild_id}`;
-                    """
-        )
-
+    async def delete_message(self, guild_id: int, message_id: int):
+        self.cur.execute(f"DELETE FROM `{guild_id}` WHERE message_id = {message_id};")
         self.con.commit()
-
-    async def get_guild(self, guild_id):
-        self.cur.execute(
-            f"""
-                        SELECT * FROM `{guild_id}`;
-                    """
-        )
-
-        return self.cur.fetchall()
-
-    async def get_guilds(self):  # TODO TEST
-        self.cur.execute(
-            f"""
-                        SHOW TABLES;
-                    """
-        )
-
-        return self.cur.fetchall()
 
     async def get_message_content(self, guild_id, user_id=None):
         if user_id:
@@ -103,3 +101,7 @@ class DB:
         content = [i[0] for i in self.cur.fetchall()]
 
         return content
+
+    async def is_ignored(self, channel_id: int, user_id: int):
+        # todo implement this
+        return False
