@@ -104,24 +104,85 @@ class DB:
         self.cur.execute(f"DELETE FROM `{guild_id}` WHERE message_id = {message_id};")
         self.con.commit()
 
-    async def get_message_content(self, guild_id, user_id=None):
-        if user_id:
+    async def add_ignore(self, guild_id: int, channel_id: int = None, user_id: int = None):
+        if channel_id is None and user_id is None:
+            raise ValueError("channel_id and user_id cannot both be None")
+
+        # Ignore based on channel_id
+        if channel_id is not None:
+
+            # Add to database
             self.cur.execute(
-                f"""
-                            SELECT message_content FROM `{guild_id}` WHERE author_id = {user_id};
-                        """
+                f"INSERT IGNORE INTO `config` (_key, data1, data2) VALUES ('channel_ignore', ?, ?);",
+                (guild_id, channel_id,)
             )
+
+            self.con.commit()
+
+        # Ignore based on user_id
+        elif user_id is not None:
+
+            # Add to database
+            self.cur.execute(
+                f"INSERT IGNORE INTO `config` (_key, data1, data2) VALUES ('user_ignore', ?, ?);",
+                (guild_id, user_id,)
+            )
+
+            self.con.commit()
+
+    async def remove_ignore(self, guild_id: int, channel_id: int = None, user_id: int = None):
+        if channel_id is None and user_id is None:
+            raise ValueError("channel_id and user_id cannot both be None")
+
+        # Ignore based on channel_id
+        if channel_id is not None:
+            # Add to database
+            self.cur.execute(
+                f"DELETE FROM `config` WHERE _key = 'channel_ignore' AND data1 = ? AND data2 = ?;",
+                (guild_id, channel_id,)
+            )
+
+        # Ignore based on user_id
+        elif user_id is not None:
+            # Add to database
+            self.cur.execute(
+                f"DELETE FROM `config` WHERE _key = 'user_ignore' AND data1 = ? AND data2 = ?;",
+                (guild_id, user_id,)
+            )
+
+        self.con.commit()
+
+    async def get_ignore_list(self, type_: str, guild_id: int = None) -> dict or list:
+        if type_ not in ["channel", "user"]:
+            raise ValueError("type_ must be either 'channel' or 'user'")
+
+        if guild_id is not None:
+            self.cur.execute(
+                f"SELECT data1, data2 FROM `config` WHERE _key = ? AND data1 = ?;", (f"{type_}_ignore", guild_id)
+            )
+
+            # format of res: [(guild_id, channel_id), (guild_id, channel_id), ...]
+            res = self.cur.fetchall()
+
+            # convert to this format -
+            # [channel_id, channel_id, ...]
+            res = [int(channel_id) for _, channel_id in res if _ == guild_id]
+            return res
+
         else:
+
+            # get list of the one that is not None
             self.cur.execute(
-                f"""
-                            SELECT message_content FROM `{guild_id}`;
-                        """
+                f"SELECT data1, data2 FROM `config` WHERE _key = ?;", (f"{type_}_ignore",)
             )
 
-        content = [i[0] for i in self.cur.fetchall()]
+            # format of res: [(guild_id, channel_id), (guild_id, channel_id), ...]
+            res = self.cur.fetchall()
 
-        return content
-
-    async def is_ignored(self, channel_id: int, user_id: int):
-        # todo implement this
-        return False
+            # convert to this format -
+            # {
+            #   guild_id: [channel_id, channel_id, ...],
+            #   guild_id: [channel_id, channel_id, ...], ...
+            # }
+            res = {int(guild_id): [int(channel_id) for _, channel_id in res if _ == guild_id] for guild_id, _ in res}
+            return res
