@@ -16,22 +16,42 @@ class DB:
 
         self.cur = self.con.cursor(prepared=True)
 
+        # check if the "data" table exists
+        self.cur.execute(
+            """
+                CREATE TABLE IF NOT EXISTS config (
+                _key TEXT NOT NULL,
+                data1 TEXT NOT NULL,
+                data2 TEXT NULL
+            );
+            """
+        )
+
+        self.con.commit()
+
+        # Note: This table will contain the following (so far):
+        # - channel_ignore
+        # - user_ignore
+        # - guild_pause
+        # - stopword
+        # - alias
+
     async def add_guild(self, guild_id):
         self.cur.execute(
             f"""
-                        CREATE TABLE IF NOT EXISTS `{guild_id}` (
-                        message_id BIGINT NOT NULL,
-                        channel_id BIGINT NOT NULL,
-                        author_id BIGINT NOT NULL,
-                        message_content BLOB,
-                        epoch BIGINT NOT NULL,
-                        is_bot BOOLEAN NOT NULL,                       
-                        num_attachments SMALLINT NOT NULL DEFAULT 0,
-                        ctx_id BIGINT,
-                        mentions TEXT,
-                        PRIMARY KEY (message_id)
-                        );
-                    """,
+                CREATE TABLE IF NOT EXISTS `{guild_id}` (
+                message_id BIGINT NOT NULL,
+                channel_id BIGINT NOT NULL,
+                author_id BIGINT NOT NULL,
+                message_content BLOB,
+                epoch BIGINT NOT NULL,
+                is_bot BOOLEAN NOT NULL,                       
+                num_attachments SMALLINT NOT NULL DEFAULT 0,
+                ctx_id BIGINT,
+                mentions TEXT,
+                PRIMARY KEY (message_id)
+                );
+            """
         )
 
         self.con.commit()
