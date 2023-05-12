@@ -22,7 +22,8 @@ class DB:
                 CREATE TABLE IF NOT EXISTS config (
                 _key TEXT NOT NULL,
                 data1 TEXT NOT NULL,
-                data2 TEXT NULL
+                data2 TEXT NULL,
+                data3 TEXT NULL
             );
             """
         )
@@ -35,6 +36,25 @@ class DB:
         # - guild_pause
         # - stopword
         # - alias
+
+        # Format -
+        # - channel_ignore:
+        #  - _key: channel_ignore
+        #  - data1: guild_id
+        #  - data2: channel_id
+        #  - data3: None
+
+        # - user_ignore:
+        #  - _key: user_ignore
+        #  - data1: guild_id
+        #  - data2: user_id
+        #  - data3: None
+
+        # - alias:
+        #  - _key: alias
+        #  - data1: guild_id
+        #  - data2: user_id
+        #  - data3: alias_id
 
     async def add_guild(self, guild_id):
         self.cur.execute(
@@ -186,3 +206,84 @@ class DB:
             # }
             res = {int(guild_id): [int(channel_id) for _, channel_id in res if _ == guild_id] for guild_id, _ in res}
             return res
+
+    async def add_user_alias(self, guild_id: int, user_id: int, alias_id: int):
+        self.cur.execute(
+            f"INSERT IGNORE INTO `config` (_key, data1, data2, data3) VALUES ('alias', ?, ?, ?);",
+            (guild_id, user_id, alias_id)
+        )
+
+        self.con.commit()
+
+    async def remove_user_alias(self, guild_id: int, user_id: int, alias_id: int):
+        self.cur.execute(
+            "DELETE FROM `config` WHERE _key = 'alias' AND data1 = ? AND data2 = ? AND data3 = ?;",
+            (guild_id, user_id, alias_id)
+        )
+
+        self.con.commit()
+
+    async def get_user_aliases(self, guild_id: int = None):
+        if guild_id is None:
+            self.cur.execute(
+                "SELECT data1, data2, data3 FROM `config` WHERE _key = 'alias';"
+            )
+
+            # data1 is guild_id, data2 is user_id, data3 is alias_id
+
+            res = self.cur.fetchall()
+
+            # convert into this format -
+            # {
+            #   guild_id: {
+            #       user_id: [alias_id, alias_id, ...],
+            #       user_id: [alias_id, alias_id, ...], ...
+            #   },
+            #   guild_id: {
+            #       user_id: [alias_id, alias_id, ...],
+            #       user_id: [alias_id, alias_id, ...], ...
+            #   }, ...
+
+            result = {}
+
+            for row in res:
+                guild_id, user_id, alias_id = row
+
+                if guild_id not in result:
+                    result[guild_id] = {}
+
+                if user_id not in result[guild_id]:
+                    result[guild_id][user_id] = []
+
+                result[guild_id][user_id].append(alias_id)
+
+            # make sure all the ids are ints
+            result = {int(guild_id): {int(user_id): [int(alias_id) for alias_id in alias_ids] for user_id, alias_ids in
+                                      user_ids.items()} for guild_id, user_ids in result.items()}
+
+            return result
+
+        else:
+            self.cur.execute(
+                "SELECT data2, data3 FROM `config` WHERE _key = 'alias' AND data1 = ?;", (guild_id,)
+            )
+
+            # data2 is user_id, data3 is alias_id
+
+            res = self.cur.fetchall()
+
+            # convert into this format -
+            # {
+            #   user_id: [alias_id, alias_id, ...],
+            #   user_id: [alias_id, alias_id, ...], ...
+            # }
+
+            res = {int(user_id): [int(alias_id) for _, alias_id in res if _ == user_id] for user_id, _ in res}
+
+            return res
+
+
+
+
+
+
