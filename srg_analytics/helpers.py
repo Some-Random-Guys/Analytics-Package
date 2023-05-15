@@ -2,18 +2,6 @@ from .DB import DB
 from collections import Counter
 
 
-async def most_used_words(db: DB, guild_id: int, user_id: int = None, n: int = 5):
-    message_content: list[str] = await db.get_message_content(guild_id, user_id or None)
-
-    if not message_content:
-        return None
-
-    all_messages = " ".join(message_content)
-    word_counts = Counter(all_messages.split())
-
-    return word_counts.most_common(n)
-
-
 async def is_ignored(db: DB, channel_id: int = None, user_id: int = None):
     if channel_id is None and user_id is None:
         raise ValueError("channel_id and user_id cannot both be None")
@@ -50,8 +38,3 @@ async def is_ignored(db: DB, channel_id: int = None, user_id: int = None):
 
     if True in [channel_ignored, user_ignored]:
         return True
-
-
-
-
-
