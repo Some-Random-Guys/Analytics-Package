@@ -126,7 +126,7 @@ class DB:
         self.con.commit()
 
     async def add_ignore(
-        self, guild_id: int, channel_id: int = None, user_id: int = None
+            self, guild_id: int, channel_id: int = None, user_id: int = None
     ):
         if channel_id is None and user_id is None:
             raise ValueError("channel_id and user_id cannot both be None")
@@ -158,7 +158,7 @@ class DB:
             self.con.commit()
 
     async def remove_ignore(
-        self, guild_id: int, channel_id: int = None, user_id: int = None
+            self, guild_id: int, channel_id: int = None, user_id: int = None
     ):
         if channel_id is None and user_id is None:
             raise ValueError("channel_id and user_id cannot both be None")
@@ -313,64 +313,92 @@ class DB:
             return res
 
     # analysis functions
+    async def get_message_count(self, guild_id: int, channel_id: int = None, user_id: int = None):
+        if guild_id is None:
+            raise ValueError("guild_id cannot be None")
 
-    # number of messages
-    async def get_user_message_count(
-        self, guild_id: int, user_id: int, channel_id: int = None
-    ) -> int:
-        """Returns the number of messages of the user, based on the filters."""
-        if channel_id:
+        if channel_id is None and user_id is None:
             self.cur.execute(
-                f"SELECT COUNT(*) FROM `{guild_id}` WHERE author_id = ? AND channel_id = ?;",
-                (user_id, channel_id),
+                f"SELECT COUNT(*) FROM `{guild_id}`",
             )
-        else:
+
+            return self.cur.fetchone()[0]
+
+        elif channel_id is not None and user_id is None:
+            self.cur.execute(
+                f"SELECT COUNT(*) FROM `{guild_id}` WHERE channel_id = ?;",
+                (channel_id,),
+            )
+
+            return self.cur.fetchone()[0]
+
+        elif channel_id is None and user_id is not None:
             self.cur.execute(
                 f"SELECT COUNT(*) FROM `{guild_id}` WHERE author_id = ?;",
                 (user_id,),
             )
 
-        return self.cur.fetchone()[0]
+            return self.cur.fetchone()[0]
 
-    async def get_channel_message_count(self, guild_id: int, channel_id: int) -> int:
-        """Returns the number of messages of the channel, based on the filters."""
-        self.cur.execute(
-            f"SELECT COUNT(*) FROM `{guild_id}` WHERE channel_id = ?;",
-            (channel_id,),
-        )
+        else:
+            self.cur.execute(
+                f"SELECT COUNT(*) FROM `{guild_id}` WHERE channel_id = ? AND author_id = ?;",
+                (channel_id, user_id),
+            )
 
-        return self.cur.fetchone()[0]
-
-    async def get_guild_message_count(self, guild_id: int) -> int:
-        """Returns the number of messages of the guild, based on the filters."""
-        self.cur.execute(
-            f"SELECT COUNT(*) FROM `{guild_id}`",
-        )
-
-        return self.cur.fetchone()[0]
+            return self.cur.fetchone()[0]
 
     async def get_mentions(self, guild_id: int, user_id: int) -> list[int]:
         """Returns all the instances where mentions are not empty, where user_id;"""
         self.cur.execute(
-            f"SELECT mentions FROM `{guild_id}` WHERE author_id = ?;",
+            f"SELECT mentions FROM `{guild_id}` WHERE author_id = ? AND mentions IS NOT NULL;",
             (user_id,),
         )
 
-        data_ = self.cur.fetchall()
+        res = self.cur.fetchall()
 
         # data = [('mention1',), ('mention2',), ('mention3',)]
         # each mention can be a csv; we need to unpack the strings
 
-        data_ = [mention[0] for mention in data_ if mention[0] != ""]
+        res = [mention[0] for mention in res]  # todo check if this is intended
 
         data = []
-        for mention in data_:
-            if "," in mention:
-                data.extend([int(mention_) for mention_ in mention.split(",")])
-            else:
-                data.append(int(mention))
-
-        # data = [int(mention) for mention in data_ if "," not in mention] + [int(mention_) for mention in mention.split(",") for mention_ in mention] BARD
-        # data = [int(mention_) for mention in data_ for mention_ in mention[0].split(",") if mention[0] != ""] if "," in mention[0] else [int(mention[0]) for mention in data_ if mention[0] != ""] CHATGPT
+        for mention in res:
+            data.extend([int(mention_) for mention_ in mention.split(",")])
 
         return data
+
+    async def get_message_content(self, guild_id: int, channel_id: int = None, user_id: int = None) -> list[str]:
+
+        if channel_id is None and user_id is None:
+            self.cur.execute(
+                f"SELECT message_content FROM `{guild_id}` WHERE message_content IS NOT NULL;",
+            )
+
+            res = self.cur.fetchall()
+
+        elif channel_id is not None and user_id is None:
+            self.cur.execute(
+                f"SELECT message_content FROM `{guild_id}` WHERE channel_id = ? AND message_content IS NOT NULL;",
+                (channel_id,),
+            )
+
+            res = self.cur.fetchall()
+
+        elif channel_id is None and user_id is not None:
+            self.cur.execute(
+                f"SELECT message_content FROM `{guild_id}` WHERE author_id = ? AND message_content IS NOT NULL;",
+                (user_id,),
+            )
+
+            res = self.cur.fetchall()
+
+        else:
+            self.cur.execute(
+                f"SELECT message_content FROM `{guild_id}` WHERE channel_id = ? AND author_id = ? AND message_content IS NOT NULL;",
+                (channel_id, user_id),
+            )
+
+            res = self.cur.fetchall()
+
+        return [message_content[0] for message_content in res]
