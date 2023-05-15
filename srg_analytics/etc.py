@@ -2,12 +2,12 @@ import random
 from wordcloud import WordCloud as wc
 import matplotlib.pyplot as plt
 import mplcyberpunk
-from .helpers import most_used_words
+from .analytics import most_used_words
 from .DB import DB
 
 
 async def wordcloud(db: DB, guild_id: int, user_id: int = None):
-    messages: dict = await most_used_words(db=db, guild_id=guild_id, user_id=user_id or None, n=100)
+    messages: dict = await most_used_words(db=db, guild_id=guild_id, user_id=user_id or None, amount=100)
 
     wordcloud = wc().generate_from_frequencies(messages)
 

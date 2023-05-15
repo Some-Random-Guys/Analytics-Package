@@ -1,5 +1,4 @@
 from .DB import DB
-from collections import Counter
 
 
 async def is_ignored(db: DB, channel_id: int = None, user_id: int = None):
