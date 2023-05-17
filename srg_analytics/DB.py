@@ -70,7 +70,8 @@ class DB:
                 author_id BIGINT NOT NULL,
                 message_content BLOB,
                 epoch BIGINT NOT NULL,
-                is_bot BOOLEAN NOT NULL,                       
+                is_bot BOOLEAN NOT NULL,
+                has_embed BOOLEAN NOT NULL,                       
                 num_attachments SMALLINT NOT NULL DEFAULT 0,
                 ctx_id BIGINT,
                 mentions TEXT,
@@ -102,8 +103,8 @@ class DB:
         self.cur.execute(
             f"""
                         INSERT IGNORE INTO `{guild_id}` (message_id, channel_id, author_id, message_content, epoch, 
-                        is_bot, num_attachments, ctx_id, mentions)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s);
+                        is_bot, has_embed, num_attachments, ctx_id, mentions)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
 
                     """,
             (
@@ -113,6 +114,7 @@ class DB:
                 data.message_content,
                 data.epoch,
                 data.is_bot,
+                data.has_embed,
                 data.num_attachments,
                 data.ctx_id,
                 data.mentions,
