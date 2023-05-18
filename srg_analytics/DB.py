@@ -128,7 +128,7 @@ class DB:
         self.con.commit()
 
     async def add_ignore(
-            self, guild_id: int, channel_id: int = None, user_id: int = None
+        self, guild_id: int, channel_id: int = None, user_id: int = None
     ):
         if channel_id is None and user_id is None:
             raise ValueError("channel_id and user_id cannot both be None")
@@ -160,7 +160,7 @@ class DB:
             self.con.commit()
 
     async def remove_ignore(
-            self, guild_id: int, channel_id: int = None, user_id: int = None
+        self, guild_id: int, channel_id: int = None, user_id: int = None
     ):
         if channel_id is None and user_id is None:
             raise ValueError("channel_id and user_id cannot both be None")
@@ -315,7 +315,9 @@ class DB:
             return res
 
     # analysis functions
-    async def get_message_count(self, guild_id: int, channel_id: int = None, user_id: int = None):
+    async def get_message_count(
+        self, guild_id: int, channel_id: int = None, user_id: int = None
+    ):
         if guild_id is None:
             raise ValueError("guild_id cannot be None")
 
@@ -352,26 +354,40 @@ class DB:
 
     async def get_mentions(self, guild_id: int, user_id: int) -> list[int]:
         """Returns all the instances where mentions are not empty, where user_id;"""
-        self.cur.execute(
-            f"SELECT mentions FROM `{guild_id}` WHERE author_id = ? AND mentions IS NOT NULL;",
-            (user_id,),
-        )
+        if user_id is not None:
+            self.cur.execute(
+                f"SELECT mentions FROM `{guild_id}` WHERE author_id = ? AND mentions IS NOT NULL;",
+                (user_id,),
+            )
 
-        res = self.cur.fetchall()
+        res = [x[0] for x in self.cur.fetchall()]
 
-        # data = [('mention1',), ('mention2',), ('mention3',)]
         # each mention can be a csv; we need to unpack the strings
-
-        res = [mention[0] for mention in res]  # todo check if this is intended
-
         data = []
         for mention in res:
             data.extend([int(mention_) for mention_ in mention.split(",")])
 
         return data
 
-    async def get_message_content(self, guild_id: int, channel_id: int = None, user_id: int = None) -> list[str]:
+    async def get_all_mentions(self, guild_id: int) -> list[int, list[int]]:
+        """Returns all the instances where mentions are not empty, in the guild, along with who the messages belonged to"""
+        self.cur.execute(
+            f"SELECT author_id, mentions FROM `{guild_id}` WHERE mentions IS NOT NULL;",
+        )
 
+        res = self.cur.fetchall()
+        data = []
+
+        for author_id, mentions in res:
+            data.extend(
+                [int(author_id), [int(mention_) for mention_ in mentions.split(",")]]
+            )
+
+        return data
+
+    async def get_message_content(
+        self, guild_id: int, channel_id: int = None, user_id: int = None
+    ) -> list[str]:
         if channel_id is None and user_id is None:
             self.cur.execute(
                 f"SELECT message_content FROM `{guild_id}` WHERE message_content IS NOT NULL;",
