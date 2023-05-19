@@ -26,18 +26,65 @@ async def wordcloud(db: DB, guild_id: int, user_id: int = None):
     return name
 
 
-async def top_members(db: DB, guild_id: int, n: int = 5, type_: str = "messages"):
+async def get_top_users(db: DB, guild_id: int, type_: str, amount: int = 10):
+    # type_ can be either "messages" or "words" or "characters"
+
     if type_ == "messages":
-        await db.cur.execute(
+        db.cur.execute(
             f"""
                 SELECT author_id, COUNT(author_id) AS count
-                FROM `{guild_id}`
+                FROM `{guild_id}` WHERE is_bot = 0
                 GROUP BY author_id
                 ORDER BY count DESC
-                LIMIT {n};
+                LIMIT {amount};
             """
         )
         return db.cur.fetchall()
 
-    if type_ == "words":
-        pass #todo
+    elif type_ == "words":
+        pass  # todo
+
+    elif type_ == "characters":
+        pass    # todo
+
+
+async def get_top_users_visual(db: DB, guild_id: int, client,  type_: str, amount: int = 10) -> str:
+    res = await get_top_users(db=db, guild_id=guild_id, type_=type_, amount=amount)
+    plt.style.use("cyberpunk")
+
+    # get member object from id and get their nickname, if not found, use "Deleted User"
+    labels = []
+    for i in res:
+        try:
+            # get guild
+            guild = client.get_guild(guild_id).get_member(i[0])
+            # get member
+            member = guild
+            # get nickname
+            labels.append(f"{member.nick or member.name} | {i[1]}")
+
+        except Exception:
+            labels.append("Unknown User")
+
+    pie, texts, autotexts = plt.pie([value for _, value in res], labels=labels, autopct="%1.1f%%")
+
+    for text in autotexts:
+        text.set_color('black')
+
+    for text in texts:
+        text.set_color('white')
+
+    plt.title(f"Top {amount} users by {type_}")
+
+    mplcyberpunk.add_glow_effects()
+
+    # save image
+    name = f"{random.randint(1, 100000000)}.png"
+    try:
+        plt.savefig(name, format='png', dpi=600)
+    except Exception as e:
+        print(e)
+
+    plt.close() # todo fix /UserWarning: Glyph 128017 (\N{SHEEP}) missing from current font.
+
+    return name
