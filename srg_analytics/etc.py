@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import mplcyberpunk
 from .analytics import most_used_words
 from .DB import DB
+from collections import Counter
 
 
 async def wordcloud(db: DB, guild_id: int, user_id: int = None):
@@ -42,13 +43,31 @@ async def get_top_users(db: DB, guild_id: int, type_: str, amount: int = 10):
         return db.cur.fetchall()
 
     elif type_ == "words":
-        pass  # todo
+        # get all messages
+        db.cur.execute(
+            f"""
+                SELECT author_id, message_content
+                FROM `{guild_id}` WHERE is_bot = 0
+            """
+        )
+        res = db.cur.fetchall()
+
+        # Count words for each user
+        word_counts = Counter()
+        for author_id, message in res:
+            words = message.split()
+            word_counts[author_id] += len(words)
+
+        # Get the top users and their word counts
+        top_users = word_counts.most_common()
+
+        return top_users[:amount]
 
     elif type_ == "characters":
-        pass    # todo
+        pass  # todo
 
 
-async def get_top_users_visual(db: DB, guild_id: int, client,  type_: str, amount: int = 10) -> str:
+async def get_top_users_visual(db: DB, guild_id: int, client, type_: str, amount: int = 10) -> str:
     res = await get_top_users(db=db, guild_id=guild_id, type_=type_, amount=amount)
     plt.style.use("cyberpunk")
 
@@ -85,6 +104,6 @@ async def get_top_users_visual(db: DB, guild_id: int, client,  type_: str, amoun
     except Exception as e:
         print(e)
 
-    plt.close() # todo fix /UserWarning: Glyph 128017 (\N{SHEEP}) missing from current font.
+    plt.close()  # todo fix /UserWarning: Glyph 128017 (\N{SHEEP}) missing from current font.
 
     return name
