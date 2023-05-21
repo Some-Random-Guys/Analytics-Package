@@ -385,38 +385,3 @@ class DB:
 
         return data
 
-    async def get_message_content(
-        self, guild_id: int, channel_id: int = None, user_id: int = None
-    ) -> list[str]:
-        if channel_id is None and user_id is None:
-            self.cur.execute(
-                f"SELECT message_content FROM `{guild_id}` WHERE message_content IS NOT NULL;",
-            )
-
-            res = self.cur.fetchall()
-
-        elif channel_id is not None and user_id is None:
-            self.cur.execute(
-                f"SELECT message_content FROM `{guild_id}` WHERE channel_id = ? AND message_content IS NOT NULL;",
-                (channel_id,),
-            )
-
-            res = self.cur.fetchall()
-
-        elif channel_id is None and user_id is not None:
-            self.cur.execute(
-                f"SELECT message_content FROM `{guild_id}` WHERE author_id = ? AND message_content IS NOT NULL;",
-                (user_id,),
-            )
-
-            res = self.cur.fetchall()
-
-        else:
-            self.cur.execute(
-                f"SELECT message_content FROM `{guild_id}` WHERE channel_id = ? AND author_id = ? AND message_content IS NOT NULL;",
-                (channel_id, user_id),
-            )
-
-            res = self.cur.fetchall()
-
-        return [message_content[0] for message_content in res]

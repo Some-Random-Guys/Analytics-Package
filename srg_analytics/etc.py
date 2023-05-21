@@ -43,28 +43,28 @@ async def get_top_users(db: DB, guild_id: int, type_: str, amount: int = 10):
         return db.cur.fetchall()
 
     elif type_ == "words":
+        return await get_top_users_by_words(db=db, guild_id=guild_id, amount=amount)
+
+    elif type_ == "characters":
         # get all messages
         db.cur.execute(
             f"""
-                SELECT author_id, message_content
-                FROM `{guild_id}` WHERE is_bot = 0
-            """
+                        SELECT author_id, message_content
+                        FROM `{guild_id}` WHERE is_bot = 0
+                    """
         )
         res = db.cur.fetchall()
 
-        # Count words for each user
-        word_counts = Counter()
-        for author_id, message in res:
-            words = message.split()
-            word_counts[author_id] += len(words)
+        # Count characters for each user
+        char_counts = Counter()
 
-        # Get the top users and their word counts
-        top_users = word_counts.most_common()
+        for author_id, message in res:
+            char_counts[author_id] += len(message)
+
+        # Get the top users and their character counts
+        top_users = char_counts.most_common()
 
         return top_users[:amount]
-
-    elif type_ == "characters":
-        pass  # todo
 
 
 async def get_top_users_visual(db: DB, guild_id: int, client, type_: str, amount: int = 10) -> str:
