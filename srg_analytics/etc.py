@@ -2,19 +2,30 @@ import random
 from wordcloud import WordCloud as wc
 import matplotlib.pyplot as plt
 import mplcyberpunk
-from .analytics import most_used_words
+
 from .DB import DB
 from collections import Counter
+from .helpers import get_top_users_by_words, get_top_words
 
 
-async def wordcloud(db: DB, guild_id: int, user_id: int = None):
-    messages: dict = await most_used_words(db=db, guild_id=guild_id, user_id=user_id or None, amount=100)
+async def wordcloud(db: DB, guild_id: int, user_id: int = None, channel_id: int = None):
+    messages = await get_top_words(db=db, guild_id=guild_id, user_id=user_id, channel_id=channel_id)
 
-    wordcloud = wc().generate_from_frequencies(messages)
+    # messages is a list of tuples
+    # each tuple is (author_id, message_content)
 
-    plt.imshow(wordcloud, interpolation='bilinear')
+    # get all the words
+    messages = [message[1] for message in messages]
+    print(messages[:5])
+    words = []
+
+    # create a wordcloud
+    wordcloud = wc(width=1920, height=1080, background_color="black").generate(" ".join(words))
+
+    # plot the wordcloud
+    plt.figure(figsize=(16, 9))
+    plt.imshow(wordcloud, interpolation="bilinear")
     plt.axis("off")
-
     mplcyberpunk.add_glow_effects()
 
     # save image
@@ -23,6 +34,8 @@ async def wordcloud(db: DB, guild_id: int, user_id: int = None):
         plt.savefig(name, format='png')
     except Exception as e:
         print(e)
+
+    plt.close()
 
     return name
 
