@@ -1,4 +1,6 @@
-wordcloud==1.9.1.1
+wordcloud==1.9.2
 matplotlib==3.7.1
 mplcyberpunk==0.7.0
 mysql-connector-python==8.0.33
+nltk==3.8.1
+validators==0.20.0
