@@ -1,53 +1,35 @@
 class Profile:
-    def __init__(
-        self,
-        guild_id: int,
-        id_: int,
-        no_of_messages: int,
-        top_5_words: list,
-        net_polarity: int,
-        most_mentioned_channels: list,
-        total_mentions: int,
-        most_mentioned_person_id: int,
-        total_times_mentioned: int,
-        most_mentioned_by_id: int,
-        most_mentioned_by_id_no: int,
-        active_channel: int,
-    ) -> None:
-        self.guildID = guild_id  # to be removed in the future
-        self.ID = id_
+    def __init__(self) -> None:
+        # id; discord things
+        self.user_id = None
+        self.guild_id = None
 
-        # NLP
-        self.no_of_messages = no_of_messages
-        self.top_5_words = top_5_words
-        self.net_polarity = net_polarity
-        self.most_mentioned_channels = most_mentioned_channels
+        ## self.rank = None
 
-        # Mentions
-        self.total_mentions = total_mentions
-        self.most_mentioned_person_id = most_mentioned_person_id
-        self.total_times_mentioned = total_times_mentioned
-        self.most_mentioned_by_id = most_mentioned_by_id
-        self.most_mentioned_by_id_no = most_mentioned_by_id_no
+        # messages
+        self.messages = None
+        self.top_words = []
+        self.top_emojis = [] 
 
-        # Channels
-        self.active_channel = active_channel
+        ## self.messages_deleted = None
+        ## self.messages_edited = None
+        ## self.top_characters = []
+        ## self.top_phrases = []
 
-    def __dict__(self):
-        return {
-            "guildID": self.guildID,
-            "ID": self.ID,
-            "number_of_messages": self.no_of_messages,
-            "top_5_words": self.top_5_words,
-            "net_polarity": self.net_polarity,
-            "most_mentioned_channels": self.most_mentioned_channels,
-            "total_mentions": self.total_mentions,
-            "most_mentioned_person_id": self.most_mentioned_person_id,
-            "total_times_mentioned": self.total_times_mentioned,
-            "most_mentioned_by_id": self.most_mentioned_by_id,
-            "most_mentioned_by_id_no": self.most_mentioned_by_id_no,
-            "active_channel": self.active_channel,
-        }
+        # channel
+        self.most_active_channel = None
 
-    def __str__(self):
-        return str(self.__dict__())
+        # mentions
+        self.total_mentions = None
+
+        self.most_mentioned = None
+        self.no_of_times_most_mentioned = None
+
+        self.most_mentioned_by = None
+        self.no_of_times_most_mentioned_by = None
+        
+        # time
+        self.most_active_hour = None
+        self.most_active_day = None
+
+        # roles

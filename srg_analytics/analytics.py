@@ -14,6 +14,7 @@ async def most_used_words(
 ) -> dict[str:int]:
     """Returns the n most used words in a guild."""
     message_content: list[str] = await db.get_message_content(guild_id, user_id or None)
+    print(message_content)
 
     if not message_content:
         return None
@@ -60,20 +61,9 @@ async def most_mentioned_by(db: DB, guild_id: int, user_id: int) -> int:
 
 async def build_profile(db: DB, guild_id: int, user_id: int) -> Profile:
     """Builds the profile for a certian user, in a certian guild."""
+    profile = Profile()
 
-    most_mentioned_ = most_mentioned(db, guild_id, user_id)
-    most_mentioned_by_ = most_mentioned_by(db, guild_id, user_id)
+    profile.user_id = user_id
+    profile.guild_id = guild_id
 
-    profile = Profile(
-        guild_id=guild_id,
-        id_=user_id,
-        no_of_messages=total_message_count(db, guild_id, user_id),
-        top_5_words=most_used_words(db, guild_id, user_id),
-        net_polarity=0,
-        most_mentioned_channels=None,
-        most_mentioned_person_id=most_mentioned_[0],
-        total_times_mentioned=most_mentioned_[1],
-        most_mentioned_by_id=most_mentioned_by_[0],
-        most_mentioned_by_id_no=most_mentioned_by_[1],
-        active_channel=None,
-    )
+    profile.messages = await total_message_count(db, guild_id, user_id)
