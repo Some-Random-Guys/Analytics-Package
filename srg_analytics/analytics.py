@@ -1,7 +1,8 @@
+import emoji
+from collections import Counter
+
 from .DB import DB
 from .profile import Profile
-from collections import Counter
-from typing import DefaultDict
 
 
 async def total_message_count(db: DB, guild_id: int, user_id: int):
@@ -25,17 +26,42 @@ async def most_used_words(
     return dict(word_counts.most_common(amount))
 
 
+async def most_used_emojis(
+    db: DB, guild_id: int, user_id: int = None, amount: int = 5
+) -> dict[str:int]:
+    """Returns the n most used emojis in a guild."""
+    message_content: list[bytes] = await db.get_message_content(
+        guild_id, user_id or None
+    )
+    print(message_content)
+
+    if not message_content:
+        return None
+
+    all_messages = "".join(message_content)
+    emoji_counts = list(Counter(all_messages.split()))
+
+    emojis = []
+    for block in emoji_counts:
+        if emoji.is_emoji(block[0]):
+            emojis.append(block)
+
+    emojis = Counter(emojis)
+    return dict(emojis.most_common(amount))
+
+
 async def total_mentions(db: DB, guild_id: int, user_id: int) -> int:
     """Returns the total number of mentions in a guild."""
     return len(await db.get_mentions(guild_id, user_id))
 
 
-async def most_mentioned(db: DB, guild_id: int, user_id: int) -> int:
+async def most_mentioned(db: DB, guild_id: int, user_id: int) -> int or None:
     """Returns the user which has been mentioned the most by the user, and the number of times mentioned."""
     mentions = db.get_mentions(guild_id, user_id)
 
     # return the most mentioned user
-    return Counter(mentions).most_common(1)[0]  # todo add check for empty list
+    most_common = Counter(mentions).most_common(1)
+    return most_common[0] if most_common else None
 
 
 async def most_mentioned_by(db: DB, guild_id: int, user_id: int) -> int:
@@ -67,3 +93,15 @@ async def build_profile(db: DB, guild_id: int, user_id: int) -> Profile:
     profile.guild_id = guild_id
 
     profile.messages = await total_message_count(db, guild_id, user_id)
+    profile.top_words = await most_used_words(db, guild_id, user_id)
+    profile.top_emojis = await most_used_emojis(db, guild_id, user_id)
+
+    profile.total_mentions = await total_mentions(db, guild_id, user_id)
+
+    most_mentioned_ = await most_mentioned(db, guild_id, user_id)
+    profile.most_mentioned = most_mentioned_[0]
+    profile.no_of_times_most_mentioned = most_mentioned_[1]
+
+    most_mentioned_by_ = await most_mentioned_by(db, guild_id, user_id)
+    profile.most_mentioned_by = most_mentioned_by_[0]
+    profile.no_of_times_most_mentioned_by = most_mentioned_by_[1]
