@@ -45,37 +45,20 @@ async def is_ignored(db: DB, channel_id: int = None, user_id: int = None):
         return True
 
 
-async def get_top_users_by_words(db: DB, guild_id: int, user_id: int = None, channel_id: int = None, amount: int = 10):
-    # get all messages
-    if user_id is not None:
+async def get_top_users_by_words(db: DB, guild_id: int, channel_id: int = None, amount: int = 10):
+
+    if channel_id is None:
         db.cur.execute(
             f"""
                         SELECT author_id, message_content
-                        FROM `{guild_id}` WHERE author_id = {user_id}
-                        AND is_bot = 0 AND message_content != ''
-                    """
-        )
-    elif channel_id is not None:
-        db.cur.execute(
-            f"""
-                        SELECT author_id, message_content
-                        FROM `{guild_id}` WHERE channel_id = {channel_id}
-                        AND is_bot = 0 AND message_content != ''
-                    """
-        )
-    elif user_id is not None and channel_id is not None:
-        db.cur.execute(
-            f"""
-                        SELECT author_id, message_content
-                        FROM `{guild_id}` WHERE author_id = {user_id} AND channel_id = {channel_id}
-                        AND is_bot = 0 AND message_content != ''
+                        FROM `{guild_id}` WHERE is_bot = 0 AND message_content != ''
                     """
         )
     else:
         db.cur.execute(
             f"""
                         SELECT author_id, message_content
-                        FROM `{guild_id}` WHERE is_bot = 0 AND message_content != ''
+                        FROM `{guild_id}` WHERE is_bot = 0 AND message_content != '' AND channel_id = {channel_id}
                     """
         )
 
@@ -91,6 +74,28 @@ async def get_top_users_by_words(db: DB, guild_id: int, user_id: int = None, cha
     top_users = word_counts.most_common()
 
     return top_users[:amount]
+
+
+async def get_top_channels_by_words(db: DB, guild_id: int, amount: int = 10):
+    db.cur.execute(
+        f"""
+            SELECT author_id, message_content
+            FROM `{guild_id}` WHERE is_bot = 0 AND message_content != ''
+        """
+    )
+
+    res = db.cur.fetchall()
+
+    # Count words for each user
+    word_counts = Counter()
+    for _channel_id, message in res:
+        words = message.split()
+        word_counts[_channel_id] += len(words)
+
+    # Get the top users and their word counts
+    top_channels = word_counts.most_common()
+
+    return top_channels[:amount]
 
 
 async def remove_stopwords(sentence):
