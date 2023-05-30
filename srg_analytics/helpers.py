@@ -79,7 +79,7 @@ async def get_top_users_by_words(db: DB, guild_id: int, channel_id: int = None, 
 async def get_top_channels_by_words(db: DB, guild_id: int, amount: int = 10):
     db.cur.execute(
         f"""
-            SELECT author_id, message_content
+            SELECT channel_id, message_content
             FROM `{guild_id}` WHERE is_bot = 0 AND message_content != ''
         """
     )
