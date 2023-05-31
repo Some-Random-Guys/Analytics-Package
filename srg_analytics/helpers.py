@@ -99,7 +99,11 @@ async def get_top_channels_by_words(db: DB, guild_id: int, amount: int = 10):
 
 
 async def remove_stopwords(sentence):
-    tokens = nltk.tokenize.word_tokenize(sentence)
+    try:
+        tokens = nltk.tokenize.word_tokenize(sentence)
+    except LookupError:
+        nltk.download("punkt")
+        tokens = nltk.tokenize.word_tokenize(sentence)
     try:
         stop_words = nltk.corpus.stopwords.words("english")
     except LookupError:
@@ -128,17 +132,20 @@ async def process_messages(messages):
         # sentence = remove_non_alpha(sentence)
 
         # remove stopwords
-        sentence = await remove_stopwords(" ".join(sentence))
+        sentence = await remove_stopwords(sentence.decode("utf-8"))
 
         for word in sentence:
             # if it is a mention
-            if sentence[0:2] == "<@":
-                continue
+            # if sentence[0:2] == "<@":
+            #     continue
 
             if len(word) <= 1:
                 continue
+            print(word)
 
             words.append(word)
+
+    print(words[:4])
     return words
 
 
@@ -181,8 +188,13 @@ async def get_top_words(db: DB, guild_id: int, user_id: int = None, channel_id: 
 
     words = await process_messages(res)
 
-    # get frequency of each word
-    freq = collections.Counter(words)
-    top_words = freq.most_common(amount)
+    # words is a list of all words ever sent, make a list of the top words and their counts
+    counts = collections.Counter(words)
+    top_words = counts.most_common(amount)
 
-    return top_words
+    print(top_words)
+
+
+
+    # return the top words with their counts
+    return top_words # [(word, count), (word, count), ...]
