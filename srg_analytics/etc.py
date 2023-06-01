@@ -9,18 +9,16 @@ from .helpers import get_top_users_by_words, get_top_words, get_top_channels_by_
 
 
 async def wordcloud(db: DB, guild_id: int, user_id: int = None, channel_id: int = None):
-    messages = await get_top_words(db=db, guild_id=guild_id, user_id=user_id, channel_id=channel_id)
+    top_words = await get_top_words(db=db, guild_id=guild_id, user_id=user_id, channel_id=channel_id)
+    # top_words = [(word, count), (word, count), ...]
 
-    # messages is a list of tuples
-    # each tuple is (author_id, message_content)
-
-    # get all the words
-    messages = [message[1] for message in messages]
-    print(messages[:5])
     words = []
+    for word, count in top_words:
+        words.extend([word] * count)
 
     # create a wordcloud
-    wordcloud = wc(width=1920, height=1080, background_color="black").generate(" ".join(words))
+    wordcloud = wc(width=3840, height=2160, background_color="black").generate(" ".join(words))
+    # apply glow effects
 
     # plot the wordcloud
     plt.figure(figsize=(16, 9))
