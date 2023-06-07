@@ -88,9 +88,13 @@ class DB:
 
         self.con.commit()
 
-    async def get_guild(self, guild_id, selected=['*']):
-        """Retrives the guild from the database."""
-        self.cur.execute(f"SELECT{', '.join(selected)} FROM `{guild_id}`;")
+    async def get(self, guild_id, selected: list = None):
+        """Retrieves the guild from the database."""
+
+        if selected is None:
+            selected = ["*"]
+
+        self.cur.execute(f"SELECT {', '.join(selected)} FROM `{guild_id}`;")
 
         return self.cur.fetchall()
 

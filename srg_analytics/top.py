@@ -54,7 +54,7 @@ async def get_top_users_visual(db: DB, guild_id: int, client, type_: str, amount
 
     # get member object from id and get their nickname, if not found, use "Deleted User"
     labels = []
-    guild = client.get_guild(guild_id)
+    guild = client.get(guild_id)
 
     for i in res:
         try:
@@ -133,7 +133,7 @@ async def get_top_channels_visual(db: DB, guild_id: int, client, type_: str, amo
     plt.style.use("cyberpunk")
 
     labels = []
-    guild = client.get_guild(guild_id)
+    guild = client.get(guild_id)
 
     for i in res:
         try:
