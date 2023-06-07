@@ -8,36 +8,6 @@ from collections import Counter
 from .helpers import get_top_users_by_words, get_top_words, get_top_channels_by_words
 
 
-async def wordcloud(db: DB, guild_id: int, user_id: int = None, channel_id: int = None):
-    top_words = await get_top_words(db=db, guild_id=guild_id, user_id=user_id, channel_id=channel_id)
-    # top_words = [(word, count), (word, count), ...]
-
-
-    # create a wordcloud
-    wordcloud = wc().generate_from_frequencies(dict(top_words))
-    # apply glow effects
-
-    # Set DPI for higher resolution
-    dpi = 300
-
-    # plot the wordcloud
-    plt.figure(figsize=(3840/dpi, 2160/dpi), dpi=dpi)
-    plt.imshow(wordcloud, interpolation="bilinear")
-    plt.axis("off")
-    mplcyberpunk.add_glow_effects()
-
-    # save image
-    name = f"{random.randint(1, 100000000)}.png"
-    try:
-        plt.savefig(name, format='png', dpi=dpi)
-    except Exception as e:
-        print(e)
-
-    plt.close()
-
-    return name
-
-
 async def get_top_users(db: DB, guild_id: int, type_: str, amount: int = 10):
     # type_ can be either "messages" or "words" or "characters"
 
