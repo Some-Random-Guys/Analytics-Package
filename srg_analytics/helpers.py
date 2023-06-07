@@ -98,26 +98,22 @@ async def get_top_channels_by_words(db: DB, guild_id: int, amount: int = 10):
     return top_channels[:amount]
 
 
-async def remove_stopwords(sentence):
-    try:
-        tokens = nltk.tokenize.word_tokenize(sentence)
-    except LookupError:
-        nltk.download("punkt")
-        tokens = nltk.tokenize.word_tokenize(sentence)
-    try:
-        stop_words = nltk.corpus.stopwords.words("english")
-    except LookupError:
-        nltk.download("stopwords")
-        stop_words = nltk.corpus.stopwords.words("english")
-    filtered = [w for w in tokens if w not in stop_words]
-    return filtered
 
 
 async def process_messages(messages):
     """Returns a list of all valid words when given a list of messages from the database."""
     # all words from data
     words = []
+
+    try:
+        stop_words = nltk.corpus.stopwords.words("english")
+    except LookupError:
+        nltk.download("stopwords")
+        stop_words = nltk.corpus.stopwords.words("english")
+
     for sentence in messages:
+        sentence = sentence.decode("utf-8")
+
         # if it is empty
         if sentence.strip() == "":
             continue
@@ -128,11 +124,16 @@ async def process_messages(messages):
         elif validators.url(str(sentence)):
             continue
 
+        try:
+            tokens = nltk.tokenize.word_tokenize(sentence)
+        except LookupError:
+            nltk.download("punkt")
+            tokens = nltk.tokenize.word_tokenize(sentence)
+
+        sentence = [w for w in tokens if w not in stop_words]
+
         # remove non alpha
         # sentence = remove_non_alpha(sentence)
-
-        # remove stopwords
-        sentence = await remove_stopwords(sentence.decode("utf-8"))
 
         for word in sentence:
             # if it is a mention
@@ -141,11 +142,9 @@ async def process_messages(messages):
 
             if len(word) <= 1:
                 continue
-            print(word)
 
             words.append(word)
 
-    print(words[:4])
     return words
 
 
@@ -184,17 +183,12 @@ async def get_top_words(db: DB, guild_id: int, user_id: int = None, channel_id: 
 
     res = db.cur.fetchall()
     res = [x[0] for x in res]
-    print(res[:4])
 
     words = await process_messages(res)
 
     # words is a list of all words ever sent, make a list of the top words and their counts
     counts = collections.Counter(words)
     top_words = counts.most_common(amount)
-
-    print(top_words)
-
-
 
     # return the top words with their counts
     return top_words # [(word, count), (word, count), ...]
