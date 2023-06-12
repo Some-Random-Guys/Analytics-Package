@@ -1,36 +1,86 @@
 from .DB import DB
 import time
+from matplotlib import pyplot as plt
 
 # M = 168
 # values = {365: [f'{i}' for i in range(1, 13)], 365 * 2: [f'{i}' for i in range(1, 25)]}
 
+# todo split this function into 2 different functions, one for server and one for user
+import time
 
-async def backend(db: DB, guild: int, time_period: int, target: str, user: int = None):
-    if target == "server":
-        messages = [i[0] for i in await db.get(guild, selected=["epoch"])]
-        current_time = time.time()
 
-        messages = sorted(filter(lambda x: x >= current_time - (8400 * time_period), messages))
+async def activity_guild(db: DB, guild_id: int, time_period: int, ):
+    messages = [i[0] for i in await db.get(guild_id, selected=["epoch"])]
+    current_time = time.time()
 
-        value = values.get(time_period, time_period)
+    messages = sorted(filter(lambda x: x >= current_time - float(86400 * time_period), messages))
 
-        x = (messages[-1] - messages[0]) // value
+    interval_mapping = {
+        1: 3600,  # 1 hour for 1 day
+        3: 10800,  # 3 hours for 3 days
+        5: 18000,  # 5 hours for 5 days
+        7: 25200,  # 7 hours for 7 days
+        14: 86400,  # 1 day for 14 days
+        21: 259200,  # 3 days for 21 days
+        30: 86400,  # 1 day for 30 days
+        60: 259200,  # 3 days for 60 days
+        90: 259200,  # 3 days for 90 days
+        180: 86400,  # 1 day for 180 days
+        270: 86400,  # 1 day for 270 days
+        365: 259200,  # 3 days for 365 days
+        # Add more intervals as needed
+    }
 
-        key_points = [messages[0] + x * (i + 1) for i in range(value)]
-        final_output = {k: 0 for k in key_points}
+    interval = interval_mapping.get(time_period)
+    if interval is None:
+        raise ValueError("Invalid time period specified.")
 
-        def categorize_epoch(epoch):
-            for point in key_points:
-                if epoch <= point:
-                    return point
+    x = (messages[-1] - messages[0]) // interval
+
+    key_points = [messages[0] + interval * (i + 1) for i in range(x)]
+    final_output = {k: 0 for k in key_points}
+
+    def categorize_epoch(epoch):
+        for point in key_points:
+            if epoch <= point:
+                return point
 
             return key_points[-1]
 
-        for epoch in messages:
-            final_output[categorize_epoch(epoch)] += 1
+    for epoch in messages:
+        final_output[categorize_epoch(epoch)] += 1
 
         return list(final_output.items())
 
     else:
-        # Add code for the "user" target
-        pass
+        raise ValueError("Invalid target specified. Supported targets: 'server'")
+
+
+async def activity_user(guild_id: int, time_period: str):
+    pass
+
+
+async def activity_guild_visual(db: DB, guild_id: int, time_period: int):
+    raw_data = await activity_guild(db, guild_id, time_period)
+
+    # based on the time_period we can determine the x-axis labels
+    labels = {
+        1: [f'{i}' for i in range(1, 25)],  # 1 day, 1 hour intervals
+        3: [f'{i}' for i in range(1, 25)],  # 3 days, 3 hour intervals
+        5: [f'{i}' for i in range(1, 25)],  # 5 days, 5 hour intervals
+        7: [f'{i}' for i in range(1, 25)],  # 7 days, 7 hour intervals
+        14: [f'{i}' for i in range(1, 25)],  # 14 days, 1 day intervals
+        21: [f'{i}' for i in range(1, 25)],  # 21 days, 3 day intervals
+        30: [f'{i}' for i in range(1, 25)],  # 30 days, 1 day intervals
+        60: [f'{i}' for i in range(1, 25)],  # 60 days, 3 day intervals
+        90: [f'{i}' for i in range(1, 25)],  # 90 days, 3 day intervals
+        180: [f'{i}' for i in range(1, 25)],  # 180 days, 1 day intervals
+        270: [f'{i}' for i in range(1, 25)],  # 270 days, 1 day intervals
+        365: [f'{i}' for i in range(1, 25)],  # 365 days, 3 day intervals
+        # Add more intervals as needed
+    }
+
+
+
+
+
