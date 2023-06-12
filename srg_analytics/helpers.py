@@ -45,8 +45,27 @@ async def is_ignored(db: DB, channel_id: int = None, user_id: int = None):
         return True
 
 
-async def get_top_users_by_words(db: DB, guild_id: int, channel_id: int = None, amount: int = 10):
+def get_words_from_user(db_or_msgs: DB | list, guild_id: int = None, user_id: int = None):
+    if isinstance(db_or_msgs, DB):
+        # message_content: list[str] = await db_or_msgs.get_message_content(guild_id, user_id or None)
+        pass # todo
+    else:
+        message_content = db_or_msgs
 
+    if not message_content:
+        return None
+
+    all_messages = " ".join(message_content)
+    words = nltk.word_tokenize(all_messages)
+
+    # remove stopwords
+    stopwords = nltk.corpus.stopwords.words("english")
+    words = [word for word in words if word not in stopwords]
+
+    return words
+
+
+async def get_top_users_by_words(db: DB, guild_id: int, channel_id: int = None, amount: int = 10):
     if channel_id is None:
         db.cur.execute(
             f"""
@@ -96,8 +115,6 @@ async def get_top_channels_by_words(db: DB, guild_id: int, amount: int = 10):
     top_channels = word_counts.most_common()
 
     return top_channels[:amount]
-
-
 
 
 async def process_messages(messages):
@@ -191,4 +208,4 @@ async def get_top_words(db: DB, guild_id: int, user_id: int = None, channel_id: 
     top_words = counts.most_common(amount)
 
     # return the top words with their counts
-    return top_words # [(word, count), (word, count), ...]
+    return top_words  # [(word, count), (word, count), ...]
