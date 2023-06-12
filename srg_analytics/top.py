@@ -1,11 +1,10 @@
 import random
-from wordcloud import WordCloud as wc
 import matplotlib.pyplot as plt
 import mplcyberpunk
 
 from .DB import DB
 from collections import Counter
-from .helpers import get_top_users_by_words, get_top_words, get_top_channels_by_words
+from .helpers import get_top_users_by_words, get_top_channels_by_words
 
 
 async def get_top_users(db: DB, guild_id: int, type_: str, amount: int = 10):
@@ -54,12 +53,12 @@ async def get_top_users_visual(db: DB, guild_id: int, client, type_: str, amount
 
     # get member object from id and get their nickname, if not found, use "Deleted User"
     labels = []
-    guild = client.get(guild_id)
+    guild = await client.fetch_guild(guild_id)
 
     for i in res:
         try:
             # get member
-            member = guild.get_member(i[0])
+            member = await guild.fetch_member(i[0])
             # get nickname
             labels.append(f"{member.nick or member.name} | {i[1]}")
 
@@ -133,7 +132,7 @@ async def get_top_channels_visual(db: DB, guild_id: int, client, type_: str, amo
     plt.style.use("cyberpunk")
 
     labels = []
-    guild = client.get(guild_id)
+    guild = await client.fetch_guild(guild_id)
 
     for i in res:
         try:
@@ -164,6 +163,6 @@ async def get_top_channels_visual(db: DB, guild_id: int, client, type_: str, amo
     except Exception as e:
         print(e)
 
-    plt.close()  # todo fix /UserWarning: Glyph 128017 (\N{SHEEP}) missing from current font.
+    plt.close()
 
     return name
