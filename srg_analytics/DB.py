@@ -374,7 +374,7 @@ class DB:
         return data
 
     async def get_all_mentions(self, guild_id: int) -> list[int, list[int]]:
-        """Returns all the instances where mentions are not empty, in the guild, along with who the messages belonged to"""
+        """Returns all the instances where mentions are not empty along with whom the messages belong to"""
         self.cur.execute(
             f"SELECT author_id, mentions FROM `{guild_id}` WHERE mentions IS NOT NULL;",
         )
@@ -389,15 +389,11 @@ class DB:
 
         return data
 
-    async def get_message_content(
-        self, guild_id: int, channel_id: int = None, user_id: int = None
-    ) -> list[str]:
+    async def get_message_content(self, guild_id: int, channel_id: int = None, user_id: int = None) -> list[str]:
         if channel_id is None and user_id is None:
             self.cur.execute(
                 f"SELECT message_content FROM `{guild_id}` WHERE message_content IS NOT NULL;",
             )
-
-            res = self.cur.fetchall()
 
         elif channel_id is not None and user_id is None:
             self.cur.execute(
@@ -405,14 +401,11 @@ class DB:
                 (channel_id,),
             )
 
-            res = self.cur.fetchall()
-
         elif channel_id is None and user_id is not None:
             self.cur.execute(
-                f"SELECT message_content FROM `{guild_id}` WHERE author_id = `{user_id}` AND message_content IS NOT NULL;",
+                f"SELECT message_content FROM `{guild_id}` WHERE author_id = ? AND message_content IS NOT NULL;",
+                (user_id,),
             )
-
-            res = self.cur.fetchall()
 
         else:
             self.cur.execute(
@@ -420,7 +413,6 @@ class DB:
                 (channel_id, user_id),
             )
 
-            res = self.cur.fetchall()
+        res = self.cur.fetchall()
 
-        print(res)
-        return [message_content[0] for message_content in res]
+        return [(message_content[0]).decode("utf-8") for message_content in res]
