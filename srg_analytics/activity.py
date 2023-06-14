@@ -15,29 +15,26 @@ async def activity_guild(db: DB, guild_id: int, time_period: int, ):
 
     messages = sorted(filter(lambda x: x >= current_time - float(86400 * time_period), messages))
 
+    day = 86400
     interval_mapping = {
-        1: 3600,  # 1 hour for 1 day
-        3: 10800,  # 3 hours for 3 days
-        5: 18000,  # 5 hours for 5 days
-        7: 25200,  # 7 hours for 7 days
-        14: 86400,  # 1 day for 14 days
-        21: 259200,  # 3 days for 21 days
-        30: 86400,  # 1 day for 30 days
-        60: 259200,  # 3 days for 60 days
-        90: 259200,  # 3 days for 90 days
-        180: 86400,  # 1 day for 180 days
-        270: 86400,  # 1 day for 270 days
-        365: 259200,  # 3 days for 365 days
+        14*day: 14,  # 1 day for 14 days
+        21*day: 7,  # 3 days for 21 days
+        30*day: 30,  # 1 day for 30 days
+        60*day: 20,  # 3 days for 60 days
+        90*day: 30,  # 3 days for 90 days
+        180*day: 180,  # 1 day for 180 days
+        270*day: 270,  # 1 day for 270 days
+        365*day: 73,  # 5 days for 365 days
         # Add more intervals as needed
     }
 
-    interval = interval_mapping.get(time_period)
-    if interval is None:
-        raise ValueError("Invalid time period specified.")
+    interval = interval_mapping.get(time_period, 24)
 
     x = (messages[-1] - messages[0]) // interval
 
-    key_points = [messages[0] + interval * (i + 1) for i in range(x)]
+    key_points = [messages[0] + x * (i + 1) for i in range(interval)]
+    print(key_points)
+    
     final_output = {k: 0 for k in key_points}
 
     def categorize_epoch(epoch):
@@ -45,15 +42,13 @@ async def activity_guild(db: DB, guild_id: int, time_period: int, ):
             if epoch <= point:
                 return point
 
-            return key_points[-1]
+        return key_points[-1]
 
     for epoch in messages:
         final_output[categorize_epoch(epoch)] += 1
 
-        return list(final_output.items())
-
-    else:
-        raise ValueError("Invalid target specified. Supported targets: 'server'")
+    print(list(final_output.items()))
+    return list(final_output.items())
 
 
 async def activity_user(guild_id: int, time_period: str):
