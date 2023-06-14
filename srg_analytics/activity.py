@@ -1,6 +1,11 @@
+import random
+
 from .DB import DB
 import time
 from matplotlib import pyplot as plt
+import datetime
+import mplcyberpunk
+
 
 # M = 168
 # values = {365: [f'{i}' for i in range(1, 13)], 365 * 2: [f'{i}' for i in range(1, 25)]}
@@ -9,7 +14,7 @@ from matplotlib import pyplot as plt
 import time
 
 
-async def activity_guild(db: DB, guild_id: int, time_period: int, ):
+async def activity_guild(db: DB, guild_id: int, time_period: int):
     messages = [i[0] for i in await db.get(guild_id, selected=["epoch"])]
     current_time = time.time()
 
@@ -55,25 +60,57 @@ async def activity_user(guild_id: int, time_period: str):
     pass
 
 
-async def activity_guild_visual(db: DB, guild_id: int, time_period: int):
+async def activity_guild_visual(db: DB, guild_id: int, time_period: int, time_zone: datetime.timezone = None):
     raw_data = await activity_guild(db, guild_id, time_period)
+    plt.style.use("cyberpunk")
 
-    # based on the time_period we can determine the x-axis labels
-    labels = {
-        1: [f'{i}' for i in range(1, 25)],  # 1 day, 1 hour intervals
-        3: [f'{i}' for i in range(1, 25)],  # 3 days, 3 hour intervals
-        5: [f'{i}' for i in range(1, 25)],  # 5 days, 5 hour intervals
-        7: [f'{i}' for i in range(1, 25)],  # 7 days, 7 hour intervals
-        14: [f'{i}' for i in range(1, 25)],  # 14 days, 1 day intervals
-        21: [f'{i}' for i in range(1, 25)],  # 21 days, 3 day intervals
-        30: [f'{i}' for i in range(1, 25)],  # 30 days, 1 day intervals
-        60: [f'{i}' for i in range(1, 25)],  # 60 days, 3 day intervals
-        90: [f'{i}' for i in range(1, 25)],  # 90 days, 3 day intervals
-        180: [f'{i}' for i in range(1, 25)],  # 180 days, 1 day intervals
-        270: [f'{i}' for i in range(1, 25)],  # 270 days, 1 day intervals
-        365: [f'{i}' for i in range(1, 25)],  # 365 days, 3 day intervals
-        # Add more intervals as needed
-    }
+    # output format - [(epoch, message_count), ...]
+
+    print(raw_data)
+
+    if time_zone is None:
+        # set timezone to GMT+3 (Moscow)
+        time_zone = datetime.timezone(datetime.timedelta(hours=3))
+
+    if time_period == 1:
+        # convert the list of raw_data, i[0] is epoch, find the hour it is in with time_zone
+
+        # Convert epoch times to datetime objects
+        datetime_data = [(datetime.datetime.fromtimestamp(epoch, time_zone), count) for epoch, count in
+                         raw_data]
+
+        # Extract hours from datetime objects and format them
+        x = [dt.strftime('%I%p') for dt, _ in datetime_data]
+
+        plt.xlabel('Hour')
+
+        plt.title('Message Count by Hour')
+        plt.xticks(rotation=45)
+
+    y = [count for _, count in raw_data]
+    plt.plot(x, y)
+
+    plt.title(f"Guild {guild_id} activity by hour")
+    plt.ylabel('Message Count')
+    plt.grid(True)
+
+    # apply glow effects
+    mplcyberpunk.make_lines_glow()
+    mplcyberpunk.add_gradient_fill(alpha_gradientglow=0.5)
+
+    name = random.randint(1, 100000000)
+    plt.savefig(f"{name}.png", format='png', dpi=400)
+    plt.close()
+
+    return f"{name}.png"
+
+
+
+
+
+
+
+
 
 
 
