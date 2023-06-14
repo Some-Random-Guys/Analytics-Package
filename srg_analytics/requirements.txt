@@ -4,4 +4,5 @@ mplcyberpunk==0.7.0
 mysql-connector-python==8.0.33
 nltk==3.8.1
 validators==0.20.0
-emoji==2.4.0
+emoji==2.5.0
+chat_exporter==2.5.3
