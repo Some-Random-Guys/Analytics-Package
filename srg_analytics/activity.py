@@ -17,11 +17,11 @@ async def activity_guild(db: DB, guild_id: int, time_period: int):
         14*day: 14,  # 1 day for 14 days
         21*day: 7,  # 3 days for 21 days
         30*day: 30,  # 1 day for 30 days
-        60*day: 20,  # 3 days for 60 days
-        90*day: 30,  # 3 days for 90 days
-        180*day: 180,  # 1 day for 180 days
-        270*day: 270,  # 1 day for 270 days
-        365*day: 73,  # 5 days for 365 days
+        60*day: 2,  # 3 days for 60 days
+        90*day: 3,  # 3 days for 90 days
+        180*day: 6,  # 1 day for 180 days
+        270*day: 9,  # 1 day for 270 days
+        365*day: 12,  # 5 days for 365 days
         # Add more intervals as needed
     }
 
@@ -62,20 +62,149 @@ async def activity_guild_visual(db: DB, guild_id: int, time_period: int, time_zo
         # set timezone to GMT+3 (Moscow)
         time_zone = datetime.timezone(datetime.timedelta(hours=3))
 
-    if time_period == 1:
-        # convert the list of raw_data, i[0] is epoch, find the hour it is in with time_zone
 
-        # Convert epoch times to datetime objects
-        datetime_data = [(datetime.datetime.fromtimestamp(epoch, time_zone), count) for epoch, count in
+    match time_period:
+        case 1:
+            # convert the list of raw_data, i[0] is epoch, find the hour it is in with time_zone
+
+            # Convert epoch times to datetime objects
+            datetime_data = [(datetime.datetime.fromtimestamp(epoch, time_zone), count) for epoch, count in
                          raw_data]
 
-        # Extract hours from datetime objects and format them
-        x = [dt.strftime('%I%p') for dt, _ in datetime_data]
+            # Extract hours from datetime objects and format them
+            x = [dt.strftime('%I%p') for dt, _ in datetime_data]
 
-        plt.xlabel('Hour')
+            plt.xlabel('Hour')
 
-        plt.title('Message Count by Hour')
-        plt.xticks(rotation=45)
+            plt.title('Message Count by Hour')
+            plt.xticks(rotation=45)
+
+        case 3:
+            # Convert epoch times to datetime objects
+            datetime_data = [(datetime.datetime.fromtimestamp(epoch, time_zone), count) for epoch, count in
+                            raw_data]
+
+            # Extract days from datetime objects and format them
+            x = [dt.strftime('%a') for dt, _ in datetime_data]
+
+            plt.xlabel('Day')
+
+            plt.title('Message Count by Day')
+            plt.xticks(rotation=45)
+
+        case 7:
+            # Convert epoch times to datetime objects
+            datetime_data = [(datetime.datetime.fromtimestamp(epoch, time_zone), count) for epoch, count in
+                            raw_data]
+
+            # Extract days from datetime objects and format them
+            x = [dt.strftime('%d') for dt, _ in datetime_data]
+
+            plt.xlabel('Day')
+
+            plt.title('Message Count by Day')
+            plt.xticks(rotation=45)
+
+        case 14:
+            # Convert epoch times to datetime objects
+            datetime_data = [(datetime.datetime.fromtimestamp(epoch, time_zone), count) for epoch, count in
+                            raw_data]
+
+            # Extract days from datetime objects and format them
+            x = [dt.strftime('%d') for dt, _ in datetime_data]
+
+            plt.xlabel('Day')
+
+            plt.title('Message Count by Day')
+            plt.xticks(rotation=45)
+
+        case 30:
+            # Convert epoch times to datetime objects
+            datetime_data = [(datetime.datetime.fromtimestamp(epoch, time_zone), count) for epoch, count in
+                            raw_data]
+
+            # Extract dates from datetime objects and format them
+            x = [dt.strftime('%d') for dt, _ in datetime_data]
+
+            plt.xlabel('Day')
+
+            plt.title('Message Count by Day')
+            plt.xticks(rotation=45)
+
+        case 60:
+            # Convert epoch times to datetime objects
+            datetime_data = [(datetime.datetime.fromtimestamp(epoch, time_zone), count) for epoch, count in
+                            raw_data]
+
+            # Extract months from datetime objects and format them
+            x = [dt.strftime('%b') for dt, _ in datetime_data]
+
+            plt.xlabel('Month')
+
+            plt.title('Message Count by Month')
+            plt.xticks(rotation=45)
+
+        case 90:
+            # Convert epoch times to datetime objects
+            datetime_data = [(datetime.datetime.fromtimestamp(epoch, time_zone), count) for epoch, count in
+                            raw_data]
+
+            # Extract months from datetime objects and format them
+            x = [dt.strftime('%b') for dt, _ in datetime_data]
+
+            plt.xlabel('Month')
+
+            plt.title('Message Count by Month')
+            plt.xticks(rotation=45)
+
+        case 180:
+            # Convert epoch times to datetime objects
+            datetime_data = [(datetime.datetime.fromtimestamp(epoch, time_zone), count) for epoch, count in
+                            raw_data]
+
+            # Extract months from datetime objects and format them
+            x = [dt.strftime('%b') for dt, _ in datetime_data]
+
+            plt.xlabel('Month')
+
+            plt.title('Message Count by Month')
+            plt.xticks(rotation=45)
+
+        case 270:
+            # Convert epoch times to datetime objects
+            datetime_data = [(datetime.datetime.fromtimestamp(epoch, time_zone), count) for epoch, count in
+                            raw_data]
+
+            # Extract months from datetime objects and format them
+            x = [dt.strftime('%b') for dt, _ in datetime_data]
+
+            plt.xlabel('Month')
+
+            plt.title('Message Count by Month')
+            plt.xticks(rotation=45)
+
+        case 365:
+            # Convert epoch times to datetime objects
+            datetime_data = [(datetime.datetime.fromtimestamp(epoch, time_zone), count) for epoch, count in
+                            raw_data]
+
+            # Extract months from datetime objects and format them
+            x = [dt.strftime('%b') for dt, _ in datetime_data]
+
+            plt.xlabel('Month')
+
+            plt.title('Message Count by Month')
+            plt.xticks(rotation=45)
+
+        case _:
+            # Convert epoch times to datetime objects
+            datetime_data = [(datetime.datetime.fromtimestamp(epoch, time_zone), count) for epoch, count in
+                            raw_data]
+
+            # Extract months from datetime objects and format them
+            x = [dt.strftime('%b') for dt, _ in datetime_data]
+
+
 
     y = [count for _, count in raw_data]
     plt.plot(x, y)
