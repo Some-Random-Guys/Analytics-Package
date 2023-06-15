@@ -1,16 +1,8 @@
 import random
-
 from .DB import DB
-import time
 from matplotlib import pyplot as plt
 import datetime
 import mplcyberpunk
-
-
-# M = 168
-# values = {365: [f'{i}' for i in range(1, 13)], 365 * 2: [f'{i}' for i in range(1, 25)]}
-
-# todo split this function into 2 different functions, one for server and one for user
 import time
 
 
@@ -38,8 +30,7 @@ async def activity_guild(db: DB, guild_id: int, time_period: int):
     x = (messages[-1] - messages[0]) // interval
 
     key_points = [messages[0] + x * (i + 1) for i in range(interval)]
-    print(key_points)
-    
+
     final_output = {k: 0 for k in key_points}
 
     def categorize_epoch(epoch):
@@ -52,7 +43,6 @@ async def activity_guild(db: DB, guild_id: int, time_period: int):
     for epoch in messages:
         final_output[categorize_epoch(epoch)] += 1
 
-    print(list(final_output.items()))
     return list(final_output.items())
 
 
@@ -99,20 +89,7 @@ async def activity_guild_visual(db: DB, guild_id: int, time_period: int, time_zo
     mplcyberpunk.add_gradient_fill(alpha_gradientglow=0.5)
 
     name = random.randint(1, 100000000)
-    plt.savefig(f"{name}.png", format='png', dpi=400)
+    plt.savefig(f"{name}.png", format='png', dpi=400, bbox_inches="tight")
     plt.close()
 
     return f"{name}.png"
-
-
-
-
-
-
-
-
-
-
-
-
-
