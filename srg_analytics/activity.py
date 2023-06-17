@@ -4,49 +4,128 @@ from matplotlib import pyplot as plt
 import datetime
 import mplcyberpunk
 import time
+from collections import Counter
+
+import datetime
 
 
-async def activity_guild(db: DB, guild_id: int, time_period: int, timezone: datetime.timezone):
-    messages = [i[0] for i in await db.get(guild_id, selected=["epoch"])]
-    current_time = time.time()
+async def activity_guild(db, guild_id, time_period):
+    timezone = datetime.timezone(datetime.timedelta(hours=3))
+    # Calculate the start and end times based on the provided time_period
+    now = datetime.datetime.now(timezone)
+    if time_period == '1d':
+        # starttime is epoch of start of today
+        start_time = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        label_format = '%H:%M'  # Format for x-axis labels
+        interval = datetime.timedelta(hours=1)  # Interval for grouping messages
+    elif time_period == '5d':
+        # starttime is epoch of start of 4 days ago
+        start_time = now - datetime.timedelta(days=4)
+        label_format = '%m-%d'  # Format for x-axis labels
+        interval = datetime.timedelta(days=1)  # Interval for grouping messages
+    elif time_period == '1w':
+        start_time = now - datetime.timedelta(weeks=1)
+        label_format = '%m-%d'  # Format for x-axis labels
+        interval = datetime.timedelta(days=1)  # Interval for grouping messages
+    elif time_period == '2w':
+        start_time = now - datetime.timedelta(weeks=2)
+        label_format = '%m-%d'  # Format for x-axis labels
+        interval = datetime.timedelta(days=1)  # Interval for grouping messages
+    elif time_period == '1m':
+        start_time = now - datetime.timedelta(days=30)
+        label_format = '%m-%d'  # Format for x-axis labels
+        interval = datetime.timedelta(days=1)  # Interval for grouping messages
+    elif time_period == '3m':
+        start_time = now - datetime.timedelta(days=90)
+        label_format = '%m-%d'  # Format for x-axis labels
+        interval = datetime.timedelta(days=30)  # Interval for grouping messages
+    elif time_period == '6m':
+        start_time = now - datetime.timedelta(days=180)
+        label_format = '%m-%d'  # Format for x-axis labels
+        interval = datetime.timedelta(days=30)  # Interval for grouping messages
+    elif time_period == '9m':
+        start_time = now - datetime.timedelta(days=270)
+        label_format = '%m-%d'  # Format for x-axis labels
+        interval = datetime.timedelta(days=30)  # Interval for grouping messages
+    elif time_period == '1y':
+        start_time = now - datetime.timedelta(days=365)
+        label_format = '%m-%d'  # Format for x-axis labels
+        interval = datetime.timedelta(days=30)  # Interval for grouping messages
+    elif time_period == '2y':
+        start_time = now - datetime.timedelta(days=365 * 2)
+        label_format = '%Y-%m'  # Format for x-axis labels
+        interval = datetime.timedelta(days=90)  # Interval for grouping messages
+    elif time_period == '3y':
+        start_time = now - datetime.timedelta(days=365 * 3)
+        label_format = '%Y-%m'  # Format for x-axis labels
+        interval = datetime.timedelta(days=90)  # Interval for grouping messages
+    elif time_period == '5y':
+        start_time = now - datetime.timedelta(days=365 * 5)
+        label_format = '%Y-%m'  # Format for x-axis labels
+        interval = datetime.timedelta(days=180)  # Interval for grouping messages
+    elif time_period == 'all':
+        start_time = datetime.datetime(1970, 1, 1, tzinfo=timezone)
+        label_format = '%Y-%m'  # Format for x-axis labels
+        interval = datetime.timedelta(days=365)  # Interval for grouping messages
+    else:
+        raise ValueError("Invalid time_period.")
 
-    # timeperiod can be 1d, 5d, 1w, 2w, 1m, 3m, 6m, 9m, 1y, 2y, 3y, 5y, 5y, all
+    # Fetch activity data from the database
+    start_time_unix = int(start_time.timestamp())
+    query = f"SELECT DATE(FROM_UNIXTIME(epoch, '%Y-%m-%d %H:%i:%s')) AS date, HOUR(FROM_UNIXTIME(epoch, " \
+            f"'%Y-%m-%d %H:%i:%s')) AS hour, COUNT(*) AS count FROM `{guild_id}` WHERE epoch >= {start_time_unix} AND epoch <= " \
+            f"UNIX_TIMESTAMP() GROUP BY date, hour"
 
-    messages = sorted(filter(lambda x: x >= current_time - float(86400 * time_period), messages))
+    data = await db.execute(query, fetch="all")
+    print(data)
+    # data format - [date, hour, count]
 
-    day = 86400
-    interval_mapping = {
-        7 * day: 7,  # 1 day for 7 days
-        14 * day: 14,  # 1 day for 14 days
-        21 * day: 7,  # 3 days for 21 days
-        30 * day: 30,  # 1 day for 30 days
-        60 * day: 2,  # 3 days for 60 days
-        90 * day: 3,  # 3 days for 90 days
-        180 * day: 6,  # 1 day for 180 days
-        270 * day: 9,  # 1 day for 270 days
-        365 * day: 12,  # 5 days for 365 days
-        # Add more intervals as needed
-    }
+    # Group the data by the specified interval (hourly, daily, etc.)
+    grouped_data = {}
 
-    interval = interval_mapping.get(time_period, 24)
+    for row in data:
+        date = row[0]
 
-    x = (messages[-1] - messages[0]) // interval
+        # if time_period 1d, 5d, 1w, 2w, 1m
+        if interval == datetime.timedelta(hours=1):
+            group_key = date.strftime('%H')
+        elif interval == datetime.timedelta(days=30):
+            group_key = date.strftime('%Y-%m')
+        elif interval == datetime.timedelta(days=90):
+            group_key = date.strftime('%Y-%m')
+        elif interval == datetime.timedelta(days=180):
+            group_key = date.strftime('%Y-%m')
+        elif interval == datetime.timedelta(days=365):
+            group_key = date.strftime('%Y')
+        else:
+            group_key = date.strftime('%Y-%m-%d')
+        grouped_data[group_key] += row[2]
 
-    key_points = [messages[0] + x * (i + 1) for i in range(interval)]
+    # Generate x-axis labels and values
+    x_labels = []
+    y_values = []
+    current_time = start_time
+    while current_time <= now:
+        if interval == datetime.timedelta(hours=1):
+            x_labels.append(current_time.strftime(label_format))
+        else:
+            x_labels.append(current_time.strftime(label_format))
+        y_values.append(grouped_data.get(current_time.strftime('%Y-%m-%d %H'), 0))
+        current_time += interval
+    # Plot the graph
+    plt.plot(x_labels, y_values)
+    plt.xlabel('Time')
+    plt.ylabel('Message Count')
+    plt.title(f'Activity Graph ({time_period})')
+    plt.xticks(rotation=45)
+    plt.tight_layout()
+    plt.savefig('activity.png', dpi=300)
 
-    final_output = {k: 0 for k in key_points}
+    return list(zip(x_labels, y_values))
 
-    def categorize_epoch(epoch):
-        for point in key_points:
-            if epoch <= point:
-                return point
 
-        return key_points[-1]
 
-    for epoch in messages:
-        final_output[categorize_epoch(epoch)] += 1
 
-    return list(final_output.items())
 
 
 async def activity_user(guild_id: int, time_period: str):
