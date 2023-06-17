@@ -5,7 +5,7 @@ import datetime
 import matplotlib.pyplot as plt
 
 
-async def activity_guild(db, guild_id, time_period, interval, time_zone: datetime.timezone = None):
+async def activity_guild(db, guild_id, time_period, interval=None, time_zone: datetime.timezone = None):
 
     # If there is no time zone, set it to UTC+3
     if time_zone is None:
@@ -16,6 +16,7 @@ async def activity_guild(db, guild_id, time_period, interval, time_zone: datetim
     # Define the time periods and intervals
     periods = {
         '1d': (now.replace(hour=0, minute=0, second=0, microsecond=0), datetime.timedelta(hours=1), '%H:%M'),
+        '3d': (now - datetime.timedelta(days=2), datetime.timedelta(days=1), '%H:%M'),
         '5d': (now - datetime.timedelta(days=4), datetime.timedelta(days=1), '%m-%d'),
         '1w': (now - datetime.timedelta(weeks=1), datetime.timedelta(days=1), '%m-%d'),
         '2w': (now - datetime.timedelta(weeks=2), datetime.timedelta(days=1), '%m-%d'),
@@ -23,43 +24,77 @@ async def activity_guild(db, guild_id, time_period, interval, time_zone: datetim
         '3m': (now - datetime.timedelta(days=90), datetime.timedelta(days=30), '%m-%d'),
         '6m': (now - datetime.timedelta(days=180), datetime.timedelta(days=30), '%m-%d'),
         '9m': (now - datetime.timedelta(days=270), datetime.timedelta(days=30), '%m-%d'),
-        '1y': (now - datetime.timedelta(days=365), datetime.timedelta(days=30), '%m-%d'),
+        '1y': (now - datetime.timedelta(days=365), datetime.timedelta(days=30), '%Y-%m'),
         '2y': (now - datetime.timedelta(days=365 * 2), datetime.timedelta(days=90), '%Y-%m'),
         '3y': (now - datetime.timedelta(days=365 * 3), datetime.timedelta(days=90), '%Y-%m'),
         '5y': (now - datetime.timedelta(days=365 * 5), datetime.timedelta(days=180), '%Y-%m'),
-        'all': (datetime.datetime(1970, 1, 1, tzinfo=time_zone), datetime.timedelta(days=365), '%Y-%m')
+        'all': (datetime.datetime(2015, 4, 1, tzinfo=time_zone), datetime.timedelta(days=365), '%Y-%m')
     }
 
-    # Retrieve the start time, interval, and label format based on the time period
-    start_time, interval, label_format = periods.get(time_period)
-    start_time_unix = int(start_time.timestamp())
+    start_time, _, label_format = periods.get(time_period)
+
+    # Determine the interval based on the provided or default value
+    if interval is None:
+        # Retrieve the start time, interval, and label format based on the time period
+        interval = _
+        start_time_unix = int(start_time.timestamp())
+
+        print(interval)
+
+    else:
+        # interval can be `hours`, `days`, `weeks`, `months`, or `years`
+        if interval in ["hours", "days", "weeks"]:
+            interval = datetime.timedelta(**{f'{interval}': 1})
+        elif interval == "months":
+            interval = datetime.timedelta(days=30)
+        elif interval == "years":
+            interval = datetime.timedelta(days=365)
+
+        # Retrieve the start time, interval, and label format based on the time period
+        start_time_unix = int(start_time.timestamp())
+
+        # get the label format based on the interval
+        if interval.days >= 365:
+            label_format = '%Y-%m'
+        elif interval.days >= 30:
+            label_format = '%m-%d'
+        else:
+            label_format = '%H:%M'
+
+        print(interval, label_format)
+
+    interval_hours = interval.total_seconds() / 3600
 
     # Fetch activity data from the database
     query = f"SELECT FROM_UNIXTIME(epoch, '%Y-%m-%d %H:00:00') AS datetime, COUNT(*) AS count FROM `{guild_id}` WHERE epoch >= {start_time_unix} AND epoch <= UNIX_TIMESTAMP() GROUP BY datetime"
     data = await db.execute(query, fetch="all")
-    # data format - [(datetime, count), ...]
 
     # Group the data by the specified interval (hourly, daily, etc.)
     grouped_data = {}
     for row in data:
         date = row[0]
         date = datetime.datetime.strptime(date, '%Y-%m-%d %H:%M:%S')
-        group_key = date.strftime(label_format)
+        if interval_hours < 1:
+            group_key = date.strftime(label_format)
+        else:
+            group_key = (date - datetime.timedelta(hours=date.hour % interval_hours)).strftime(label_format)
         grouped_data.setdefault(group_key, 0)
         grouped_data[group_key] += row[1]
 
-    # fill in all missing data points with 0
-    for i in range(int((now - start_time) / interval) + 1):
-        key = (start_time + interval * i).strftime(label_format)
+    # Fill in all missing data points with 0
+    current_time = start_time
+    while current_time <= now:
+        key = current_time.strftime(label_format)
         grouped_data.setdefault(key, 0)
+        current_time += interval
 
-    # if time_period is 1, fill in values till 23 but keep them 0
+    # If time_period is 1d, fill in values till 23 but keep them 0
     if time_period == '1d':
         for i in range(24):
-            key = (start_time + interval * i).strftime(label_format)
+            key = (start_time + datetime.timedelta(hours=i)).strftime(label_format)
             grouped_data.setdefault(key, 0)
 
-    # sort the data by date
+    # Sort the data by date
     grouped_data = dict(sorted(grouped_data.items(), key=lambda x: datetime.datetime.strptime(x[0], label_format)))
 
     # Generate x-axis labels and values
@@ -73,8 +108,9 @@ async def activity_user(guild_id: int, time_period: str):
     pass
 
 
-async def activity_guild_visual(db: DB, guild_id: int, time_period: int, time_zone: datetime.timezone = None):
-    x, y = await activity_guild(db, guild_id, time_period)
+async def activity_guild_visual(db: DB, guild_id: int, time_period: int, interval: str = None,
+                                timezone: datetime.timezone = None):
+    x, y = await activity_guild(db, guild_id, time_period, interval, timezone)
     plt.style.use("cyberpunk")
 
     # Plot the graph
