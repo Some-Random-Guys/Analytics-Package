@@ -1,131 +1,72 @@
 import random
 from .DB import DB
-from matplotlib import pyplot as plt
-import datetime
 import mplcyberpunk
-import time
-from collections import Counter
-
 import datetime
+import matplotlib.pyplot as plt
 
 
-async def activity_guild(db, guild_id, time_period):
-    timezone = datetime.timezone(datetime.timedelta(hours=3))
-    # Calculate the start and end times based on the provided time_period
-    now = datetime.datetime.now(timezone)
-    if time_period == '1d':
-        # starttime is epoch of start of today
-        start_time = now.replace(hour=0, minute=0, second=0, microsecond=0)
-        label_format = '%H:%M'  # Format for x-axis labels
-        interval = datetime.timedelta(hours=1)  # Interval for grouping messages
-    elif time_period == '5d':
-        # starttime is epoch of start of 4 days ago
-        start_time = now - datetime.timedelta(days=4)
-        label_format = '%m-%d'  # Format for x-axis labels
-        interval = datetime.timedelta(days=1)  # Interval for grouping messages
-    elif time_period == '1w':
-        start_time = now - datetime.timedelta(weeks=1)
-        label_format = '%m-%d'  # Format for x-axis labels
-        interval = datetime.timedelta(days=1)  # Interval for grouping messages
-    elif time_period == '2w':
-        start_time = now - datetime.timedelta(weeks=2)
-        label_format = '%m-%d'  # Format for x-axis labels
-        interval = datetime.timedelta(days=1)  # Interval for grouping messages
-    elif time_period == '1m':
-        start_time = now - datetime.timedelta(days=30)
-        label_format = '%m-%d'  # Format for x-axis labels
-        interval = datetime.timedelta(days=1)  # Interval for grouping messages
-    elif time_period == '3m':
-        start_time = now - datetime.timedelta(days=90)
-        label_format = '%m-%d'  # Format for x-axis labels
-        interval = datetime.timedelta(days=30)  # Interval for grouping messages
-    elif time_period == '6m':
-        start_time = now - datetime.timedelta(days=180)
-        label_format = '%m-%d'  # Format for x-axis labels
-        interval = datetime.timedelta(days=30)  # Interval for grouping messages
-    elif time_period == '9m':
-        start_time = now - datetime.timedelta(days=270)
-        label_format = '%m-%d'  # Format for x-axis labels
-        interval = datetime.timedelta(days=30)  # Interval for grouping messages
-    elif time_period == '1y':
-        start_time = now - datetime.timedelta(days=365)
-        label_format = '%m-%d'  # Format for x-axis labels
-        interval = datetime.timedelta(days=30)  # Interval for grouping messages
-    elif time_period == '2y':
-        start_time = now - datetime.timedelta(days=365 * 2)
-        label_format = '%Y-%m'  # Format for x-axis labels
-        interval = datetime.timedelta(days=90)  # Interval for grouping messages
-    elif time_period == '3y':
-        start_time = now - datetime.timedelta(days=365 * 3)
-        label_format = '%Y-%m'  # Format for x-axis labels
-        interval = datetime.timedelta(days=90)  # Interval for grouping messages
-    elif time_period == '5y':
-        start_time = now - datetime.timedelta(days=365 * 5)
-        label_format = '%Y-%m'  # Format for x-axis labels
-        interval = datetime.timedelta(days=180)  # Interval for grouping messages
-    elif time_period == 'all':
-        start_time = datetime.datetime(1970, 1, 1, tzinfo=timezone)
-        label_format = '%Y-%m'  # Format for x-axis labels
-        interval = datetime.timedelta(days=365)  # Interval for grouping messages
-    else:
-        raise ValueError("Invalid time_period.")
+async def activity_guild(db, guild_id, time_period, interval, time_zone: datetime.timezone = None):
+
+    # If there is no time zone, set it to UTC+3
+    if time_zone is None:
+        time_zone = datetime.timezone(datetime.timedelta(hours=3))
+
+    now = datetime.datetime.now(time_zone)
+
+    # Define the time periods and intervals
+    periods = {
+        '1d': (now.replace(hour=0, minute=0, second=0, microsecond=0), datetime.timedelta(hours=1), '%H:%M'),
+        '5d': (now - datetime.timedelta(days=4), datetime.timedelta(days=1), '%m-%d'),
+        '1w': (now - datetime.timedelta(weeks=1), datetime.timedelta(days=1), '%m-%d'),
+        '2w': (now - datetime.timedelta(weeks=2), datetime.timedelta(days=1), '%m-%d'),
+        '1m': (now - datetime.timedelta(days=30), datetime.timedelta(days=1), '%m-%d'),
+        '3m': (now - datetime.timedelta(days=90), datetime.timedelta(days=30), '%m-%d'),
+        '6m': (now - datetime.timedelta(days=180), datetime.timedelta(days=30), '%m-%d'),
+        '9m': (now - datetime.timedelta(days=270), datetime.timedelta(days=30), '%m-%d'),
+        '1y': (now - datetime.timedelta(days=365), datetime.timedelta(days=30), '%m-%d'),
+        '2y': (now - datetime.timedelta(days=365 * 2), datetime.timedelta(days=90), '%Y-%m'),
+        '3y': (now - datetime.timedelta(days=365 * 3), datetime.timedelta(days=90), '%Y-%m'),
+        '5y': (now - datetime.timedelta(days=365 * 5), datetime.timedelta(days=180), '%Y-%m'),
+        'all': (datetime.datetime(1970, 1, 1, tzinfo=time_zone), datetime.timedelta(days=365), '%Y-%m')
+    }
+
+    # Retrieve the start time, interval, and label format based on the time period
+    start_time, interval, label_format = periods.get(time_period)
+    start_time_unix = int(start_time.timestamp())
 
     # Fetch activity data from the database
-    start_time_unix = int(start_time.timestamp())
-    query = f"SELECT DATE(FROM_UNIXTIME(epoch, '%Y-%m-%d %H:%i:%s')) AS date, HOUR(FROM_UNIXTIME(epoch, " \
-            f"'%Y-%m-%d %H:%i:%s')) AS hour, COUNT(*) AS count FROM `{guild_id}` WHERE epoch >= {start_time_unix} AND epoch <= " \
-            f"UNIX_TIMESTAMP() GROUP BY date, hour"
-
+    query = f"SELECT FROM_UNIXTIME(epoch, '%Y-%m-%d %H:00:00') AS datetime, COUNT(*) AS count FROM `{guild_id}` WHERE epoch >= {start_time_unix} AND epoch <= UNIX_TIMESTAMP() GROUP BY datetime"
     data = await db.execute(query, fetch="all")
-    print(data)
-    # data format - [date, hour, count]
+    # data format - [(datetime, count), ...]
 
     # Group the data by the specified interval (hourly, daily, etc.)
     grouped_data = {}
-
     for row in data:
         date = row[0]
+        date = datetime.datetime.strptime(date, '%Y-%m-%d %H:%M:%S')
+        group_key = date.strftime(label_format)
+        grouped_data.setdefault(group_key, 0)
+        grouped_data[group_key] += row[1]
 
-        # if time_period 1d, 5d, 1w, 2w, 1m
-        if interval == datetime.timedelta(hours=1):
-            group_key = date.strftime('%H')
-        elif interval == datetime.timedelta(days=30):
-            group_key = date.strftime('%Y-%m')
-        elif interval == datetime.timedelta(days=90):
-            group_key = date.strftime('%Y-%m')
-        elif interval == datetime.timedelta(days=180):
-            group_key = date.strftime('%Y-%m')
-        elif interval == datetime.timedelta(days=365):
-            group_key = date.strftime('%Y')
-        else:
-            group_key = date.strftime('%Y-%m-%d')
-        grouped_data[group_key] += row[2]
+    # fill in all missing data points with 0
+    for i in range(int((now - start_time) / interval) + 1):
+        key = (start_time + interval * i).strftime(label_format)
+        grouped_data.setdefault(key, 0)
+
+    # if time_period is 1, fill in values till 23 but keep them 0
+    if time_period == '1d':
+        for i in range(24):
+            key = (start_time + interval * i).strftime(label_format)
+            grouped_data.setdefault(key, 0)
+
+    # sort the data by date
+    grouped_data = dict(sorted(grouped_data.items(), key=lambda x: datetime.datetime.strptime(x[0], label_format)))
 
     # Generate x-axis labels and values
-    x_labels = []
-    y_values = []
-    current_time = start_time
-    while current_time <= now:
-        if interval == datetime.timedelta(hours=1):
-            x_labels.append(current_time.strftime(label_format))
-        else:
-            x_labels.append(current_time.strftime(label_format))
-        y_values.append(grouped_data.get(current_time.strftime('%Y-%m-%d %H'), 0))
-        current_time += interval
-    # Plot the graph
-    plt.plot(x_labels, y_values)
-    plt.xlabel('Time')
-    plt.ylabel('Message Count')
-    plt.title(f'Activity Graph ({time_period})')
-    plt.xticks(rotation=45)
-    plt.tight_layout()
-    plt.savefig('activity.png', dpi=300)
+    x_labels = list(grouped_data.keys())
+    y_values = list(grouped_data.values())
 
-    return list(zip(x_labels, y_values))
-
-
-
-
+    return x_labels, y_values
 
 
 async def activity_user(guild_id: int, time_period: str):
@@ -133,164 +74,22 @@ async def activity_user(guild_id: int, time_period: str):
 
 
 async def activity_guild_visual(db: DB, guild_id: int, time_period: int, time_zone: datetime.timezone = None):
-    raw_data = await activity_guild(db, guild_id, time_period)
+    x, y = await activity_guild(db, guild_id, time_period)
     plt.style.use("cyberpunk")
 
-    # output format - [(epoch, message_count), ...]
+    # Plot the graph
+    plt.plot(x, y, "-o")
 
-    print(raw_data)
-
-    if time_zone is None:
-        # set timezone to GMT+3 (Moscow)
-        time_zone = datetime.timezone(datetime.timedelta(hours=3))
-
-    match time_period:
-        case 1:
-            # convert the list of raw_data, i[0] is epoch, find the hour it is in with time_zone
-
-            # Convert epoch times to datetime objects
-            datetime_data = [(datetime.datetime.fromtimestamp(epoch, time_zone), count) for epoch, count in
-                             raw_data]
-
-            # Extract hours from datetime objects and format them
-            x = [dt.strftime('%I%p') for dt, _ in datetime_data]
-
-            plt.xlabel('Hour')
-
-            plt.title('Message Count by Hour')
-            plt.xticks(rotation=45)
-
-        case 3:
-            # Convert epoch times to datetime objects
-            datetime_data = [(datetime.datetime.fromtimestamp(epoch, time_zone), count) for epoch, count in
-                             raw_data]
-
-            # Extract days from datetime objects and format them
-            x = [dt.strftime('%a') for dt, _ in datetime_data]
-
-            plt.xlabel('Day')
-
-            plt.title('Message Count by Day')
-            plt.xticks(rotation=45)
-
-        case 7:
-            # Convert epoch times to datetime objects
-            datetime_data = [(datetime.datetime.fromtimestamp(epoch, time_zone), count) for epoch, count in
-                             raw_data]
-
-            # Extract days from datetime objects and format them
-            x = [dt.strftime('%d') for dt, _ in datetime_data]
-
-            plt.xlabel('Day')
-
-            plt.title('Message Count by Day')
-            plt.xticks(rotation=45)
-
-        case 14:
-            # Convert epoch times to datetime objects
-            datetime_data = [(datetime.datetime.fromtimestamp(epoch, time_zone), count) for epoch, count in
-                             raw_data]
-
-            # Extract days from datetime objects and format them
-            x = [dt.strftime('%d') for dt, _ in datetime_data]
-
-            plt.xlabel('Day')
-
-            plt.title('Message Count by Day')
-            plt.xticks(rotation=45)
-
-        case 30:
-            # Convert epoch times to datetime objects
-            datetime_data = [(datetime.datetime.fromtimestamp(epoch, time_zone), count) for epoch, count in
-                             raw_data]
-
-            # Extract dates from datetime objects and format them
-            x = [dt.strftime('%d') for dt, _ in datetime_data]
-
-            plt.xlabel('Day')
-
-            plt.title('Message Count by Day')
-            plt.xticks(rotation=45)
-
-        case 60:
-            # Convert epoch times to datetime objects
-            datetime_data = [(datetime.datetime.fromtimestamp(epoch, time_zone), count) for epoch, count in
-                             raw_data]
-
-            # Extract months from datetime objects and format them
-            x = [dt.strftime('%b') for dt, _ in datetime_data]
-
-            plt.xlabel('Month')
-
-            plt.title('Message Count by Month')
-            plt.xticks(rotation=45)
-
-        case 90:
-            # Convert epoch times to datetime objects
-            datetime_data = [(datetime.datetime.fromtimestamp(epoch, time_zone), count) for epoch, count in
-                             raw_data]
-
-            # Extract months from datetime objects and format them
-            x = [dt.strftime('%b') for dt, _ in datetime_data]
-
-            plt.xlabel('Month')
-
-            plt.title('Message Count by Month')
-            plt.xticks(rotation=45)
-
-        case 180:
-            # Convert epoch times to datetime objects
-            datetime_data = [(datetime.datetime.fromtimestamp(epoch, time_zone), count) for epoch, count in
-                             raw_data]
-
-            # Extract months from datetime objects and format them
-            x = [dt.strftime('%b') for dt, _ in datetime_data]
-
-            plt.xlabel('Month')
-
-            plt.title('Message Count by Month')
-            plt.xticks(rotation=45)
-
-        case 270:
-            # Convert epoch times to datetime objects
-            datetime_data = [(datetime.datetime.fromtimestamp(epoch, time_zone), count) for epoch, count in
-                             raw_data]
-
-            # Extract months from datetime objects and format them
-            x = [dt.strftime('%b') for dt, _ in datetime_data]
-
-            plt.xlabel('Month')
-
-            plt.title('Message Count by Month')
-            plt.xticks(rotation=45)
-
-        case 365:
-            # Convert epoch times to datetime objects
-            datetime_data = [(datetime.datetime.fromtimestamp(epoch, time_zone), count) for epoch, count in
-                             raw_data]
-
-            # Extract months from datetime objects and format them
-            x = [dt.strftime('%b') for dt, _ in datetime_data]
-
-            plt.xlabel('Month')
-
-            plt.title('Message Count by Month')
-            plt.xticks(rotation=45)
-
-        case _:
-            # Convert epoch times to datetime objects
-            datetime_data = [(datetime.datetime.fromtimestamp(epoch, time_zone), count) for epoch, count in
-                             raw_data]
-
-            # Extract months from datetime objects and format them
-            x = [dt.strftime('%b') for dt, _ in datetime_data]
-
-    y = [count for _, count in raw_data]
-    plt.plot(x, y)
-
-    plt.title(f"Guild {guild_id} activity by hour")
+    # Add labels and title
+    plt.xlabel('Time')
     plt.ylabel('Message Count')
+    plt.title(f'Activity Graph ({time_period})')
+
+    # Rotate x-axis labels
+    plt.xticks(rotation=45)
+
     plt.grid(True)
+    plt.tight_layout()
 
     # apply glow effects
     mplcyberpunk.make_lines_glow()
