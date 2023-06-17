@@ -6,22 +6,25 @@ import mplcyberpunk
 import time
 
 
-async def activity_guild(db: DB, guild_id: int, time_period: int):
+async def activity_guild(db: DB, guild_id: int, time_period: int, timezone: datetime.timezone):
     messages = [i[0] for i in await db.get(guild_id, selected=["epoch"])]
     current_time = time.time()
+
+    # timeperiod can be 1d, 5d, 1w, 2w, 1m, 3m, 6m, 9m, 1y, 2y, 3y, 5y, 5y, all
 
     messages = sorted(filter(lambda x: x >= current_time - float(86400 * time_period), messages))
 
     day = 86400
     interval_mapping = {
-        14*day: 14,  # 1 day for 14 days
-        21*day: 7,  # 3 days for 21 days
-        30*day: 30,  # 1 day for 30 days
-        60*day: 2,  # 3 days for 60 days
-        90*day: 3,  # 3 days for 90 days
-        180*day: 6,  # 1 day for 180 days
-        270*day: 9,  # 1 day for 270 days
-        365*day: 12,  # 5 days for 365 days
+        7 * day: 7,  # 1 day for 7 days
+        14 * day: 14,  # 1 day for 14 days
+        21 * day: 7,  # 3 days for 21 days
+        30 * day: 30,  # 1 day for 30 days
+        60 * day: 2,  # 3 days for 60 days
+        90 * day: 3,  # 3 days for 90 days
+        180 * day: 6,  # 1 day for 180 days
+        270 * day: 9,  # 1 day for 270 days
+        365 * day: 12,  # 5 days for 365 days
         # Add more intervals as needed
     }
 
@@ -62,14 +65,13 @@ async def activity_guild_visual(db: DB, guild_id: int, time_period: int, time_zo
         # set timezone to GMT+3 (Moscow)
         time_zone = datetime.timezone(datetime.timedelta(hours=3))
 
-
     match time_period:
         case 1:
             # convert the list of raw_data, i[0] is epoch, find the hour it is in with time_zone
 
             # Convert epoch times to datetime objects
             datetime_data = [(datetime.datetime.fromtimestamp(epoch, time_zone), count) for epoch, count in
-                         raw_data]
+                             raw_data]
 
             # Extract hours from datetime objects and format them
             x = [dt.strftime('%I%p') for dt, _ in datetime_data]
@@ -82,7 +84,7 @@ async def activity_guild_visual(db: DB, guild_id: int, time_period: int, time_zo
         case 3:
             # Convert epoch times to datetime objects
             datetime_data = [(datetime.datetime.fromtimestamp(epoch, time_zone), count) for epoch, count in
-                            raw_data]
+                             raw_data]
 
             # Extract days from datetime objects and format them
             x = [dt.strftime('%a') for dt, _ in datetime_data]
@@ -95,7 +97,7 @@ async def activity_guild_visual(db: DB, guild_id: int, time_period: int, time_zo
         case 7:
             # Convert epoch times to datetime objects
             datetime_data = [(datetime.datetime.fromtimestamp(epoch, time_zone), count) for epoch, count in
-                            raw_data]
+                             raw_data]
 
             # Extract days from datetime objects and format them
             x = [dt.strftime('%d') for dt, _ in datetime_data]
@@ -108,7 +110,7 @@ async def activity_guild_visual(db: DB, guild_id: int, time_period: int, time_zo
         case 14:
             # Convert epoch times to datetime objects
             datetime_data = [(datetime.datetime.fromtimestamp(epoch, time_zone), count) for epoch, count in
-                            raw_data]
+                             raw_data]
 
             # Extract days from datetime objects and format them
             x = [dt.strftime('%d') for dt, _ in datetime_data]
@@ -121,7 +123,7 @@ async def activity_guild_visual(db: DB, guild_id: int, time_period: int, time_zo
         case 30:
             # Convert epoch times to datetime objects
             datetime_data = [(datetime.datetime.fromtimestamp(epoch, time_zone), count) for epoch, count in
-                            raw_data]
+                             raw_data]
 
             # Extract dates from datetime objects and format them
             x = [dt.strftime('%d') for dt, _ in datetime_data]
@@ -134,7 +136,7 @@ async def activity_guild_visual(db: DB, guild_id: int, time_period: int, time_zo
         case 60:
             # Convert epoch times to datetime objects
             datetime_data = [(datetime.datetime.fromtimestamp(epoch, time_zone), count) for epoch, count in
-                            raw_data]
+                             raw_data]
 
             # Extract months from datetime objects and format them
             x = [dt.strftime('%b') for dt, _ in datetime_data]
@@ -147,7 +149,7 @@ async def activity_guild_visual(db: DB, guild_id: int, time_period: int, time_zo
         case 90:
             # Convert epoch times to datetime objects
             datetime_data = [(datetime.datetime.fromtimestamp(epoch, time_zone), count) for epoch, count in
-                            raw_data]
+                             raw_data]
 
             # Extract months from datetime objects and format them
             x = [dt.strftime('%b') for dt, _ in datetime_data]
@@ -160,7 +162,7 @@ async def activity_guild_visual(db: DB, guild_id: int, time_period: int, time_zo
         case 180:
             # Convert epoch times to datetime objects
             datetime_data = [(datetime.datetime.fromtimestamp(epoch, time_zone), count) for epoch, count in
-                            raw_data]
+                             raw_data]
 
             # Extract months from datetime objects and format them
             x = [dt.strftime('%b') for dt, _ in datetime_data]
@@ -173,7 +175,7 @@ async def activity_guild_visual(db: DB, guild_id: int, time_period: int, time_zo
         case 270:
             # Convert epoch times to datetime objects
             datetime_data = [(datetime.datetime.fromtimestamp(epoch, time_zone), count) for epoch, count in
-                            raw_data]
+                             raw_data]
 
             # Extract months from datetime objects and format them
             x = [dt.strftime('%b') for dt, _ in datetime_data]
@@ -186,7 +188,7 @@ async def activity_guild_visual(db: DB, guild_id: int, time_period: int, time_zo
         case 365:
             # Convert epoch times to datetime objects
             datetime_data = [(datetime.datetime.fromtimestamp(epoch, time_zone), count) for epoch, count in
-                            raw_data]
+                             raw_data]
 
             # Extract months from datetime objects and format them
             x = [dt.strftime('%b') for dt, _ in datetime_data]
@@ -199,12 +201,10 @@ async def activity_guild_visual(db: DB, guild_id: int, time_period: int, time_zo
         case _:
             # Convert epoch times to datetime objects
             datetime_data = [(datetime.datetime.fromtimestamp(epoch, time_zone), count) for epoch, count in
-                            raw_data]
+                             raw_data]
 
             # Extract months from datetime objects and format them
             x = [dt.strftime('%b') for dt, _ in datetime_data]
-
-
 
     y = [count for _, count in raw_data]
     plt.plot(x, y)
