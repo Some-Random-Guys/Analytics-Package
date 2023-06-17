@@ -11,29 +11,27 @@ async def get_top_users(db: DB, guild_id: int, type_: str, amount: int = 10):
     # type_ can be either "messages" or "words" or "characters"
 
     if type_ == "messages":
-        db.cur.execute(
+        return await db.execute(
             f"""
                 SELECT author_id, COUNT(author_id) AS count
                 FROM `{guild_id}` WHERE is_bot = 0
                 GROUP BY author_id
                 ORDER BY count DESC
                 LIMIT {amount};
-            """
+            """, fetch="all"
         )
-        return db.cur.fetchall()
 
     elif type_ == "words":
         return await get_top_users_by_words(db=db, guild_id=guild_id, amount=amount)
 
     elif type_ == "characters":
         # get all messages
-        db.cur.execute(
+        res = await db.execute(
             f"""
                         SELECT author_id, message_content
                         FROM `{guild_id}` WHERE is_bot = 0
-                    """
+                    """, fetch="all"
         )
-        res = db.cur.fetchall()
 
         # Count characters for each user
         char_counts = Counter()
@@ -91,29 +89,27 @@ async def get_top_users_visual(db: DB, guild_id: int, client, type_: str, amount
 
 async def get_top_channels(db: DB, guild_id: int, type_: str, amount: int = 10):
     if type_ == "messages":
-        db.cur.execute(
+        return await db.execute(
             f"""
                 SELECT channel_id, COUNT(author_id) AS count
                 FROM `{guild_id}` WHERE is_bot = 0
                 GROUP BY channel_id
                 ORDER BY count DESC
                 LIMIT {amount};
-            """
+            """, fetch="all"
         )
-        return db.cur.fetchall()
 
     elif type_ == "words":
         return await get_top_channels_by_words(db=db, guild_id=guild_id, amount=amount)
 
     elif type_ == "characters":
         # get all messages
-        db.cur.execute(
+        res = await db.execute(
             f"""
                         SELECT channel_id, message_content
                         FROM `{guild_id}` WHERE is_bot = 0
-                    """
+                    """, fetch="all"
         )
-        res = db.cur.fetchall()
 
         # Count characters for each user
         char_counts = Counter()

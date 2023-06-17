@@ -16,12 +16,11 @@ async def is_ignored(db: DB, channel_id: int = None, user_id: int = None):
 
     # Ignore based on channel_id
     if channel_id is not None:
-        db.cur.execute(
+        res = await db.execute(
             f"""
                         SELECT * FROM `config` WHERE data1 = {channel_id} AND _key = 'channel_ignore'
-                    """
+                    """, fetch="one"
         )
-        res = db.cur.fetchone()
         try:
             channel_ignored = res[0] == channel_id
         except TypeError:
@@ -29,13 +28,13 @@ async def is_ignored(db: DB, channel_id: int = None, user_id: int = None):
 
     # Ignore based on user_id
     if user_id is not None:
-        db.cur.execute(
+        res = await db.execute(
             f"""
                         SELECT data1 FROM `config` WHERE data1 = {user_id} AND _key = 'user_ignore';
-                    """
+                    """, fetch="one"
         )
+
         # get the data1 and check if it is equal to user_id
-        res = db.cur.fetchone()
         try:
             user_ignored = res[0] == user_id
         except TypeError:
@@ -67,21 +66,19 @@ def get_words_from_user(db_or_msgs: DB | list, guild_id: int = None, user_id: in
 
 async def get_top_users_by_words(db: DB, guild_id: int, channel_id: int = None, amount: int = 10):
     if channel_id is None:
-        db.cur.execute(
+        res = await db.execute(
             f"""
                         SELECT author_id, message_content
                         FROM `{guild_id}` WHERE is_bot = 0 AND message_content != ''
-                    """
+                    """, fetch="all"
         )
     else:
-        db.cur.execute(
+        res = await db.execute(
             f"""
                         SELECT author_id, message_content
                         FROM `{guild_id}` WHERE is_bot = 0 AND message_content != '' AND channel_id = {channel_id}
-                    """
+                    """, fetch="all"
         )
-
-    res = db.cur.fetchall()
 
     # Count words for each user
     word_counts = Counter()
@@ -96,14 +93,12 @@ async def get_top_users_by_words(db: DB, guild_id: int, channel_id: int = None, 
 
 
 async def get_top_channels_by_words(db: DB, guild_id: int, amount: int = 10):
-    db.cur.execute(
+    res = await db.execute(
         f"""
             SELECT channel_id, message_content
             FROM `{guild_id}` WHERE is_bot = 0 AND message_content != ''
-        """
+        """, fetch="all"
     )
-
-    res = db.cur.fetchall()
 
     # Count words for each user
     word_counts = Counter()
@@ -167,38 +162,37 @@ async def process_messages(messages):
 
 async def get_top_words(db: DB, guild_id: int, user_id: int = None, channel_id: int = None, amount: int = None):
     if user_id is not None:
-        db.cur.execute(
+        res = await db.execute(
             f"""
                         SELECT message_content
                         FROM `{guild_id}` WHERE author_id = {user_id}
                         AND is_bot = 0 AND message_content != ''
-                    """
+                    """, fetch="all"
         )
     elif channel_id is not None:
-        db.cur.execute(
+        res = await db.execute(
             f"""
                         SELECT message_content
                         FROM `{guild_id}` WHERE channel_id = {channel_id}
                         AND is_bot = 0 AND message_content != ''
-                    """
+                    """, fetch="all"
         )
     elif user_id is not None and channel_id is not None:
-        db.cur.execute(
+        res = await db.execute(
             f"""
                         SELECT message_content
                         FROM `{guild_id}` WHERE author_id = {user_id} AND channel_id = {channel_id}
                         AND is_bot = 0 AND message_content != ''
-                    """
+                    """, fetch="all"
         )
     else:
-        db.cur.execute(
+        res = await db.execute(
             f"""
                         SELECT message_content
                         FROM `{guild_id}` WHERE is_bot = 0 AND message_content != ''
-                    """
+                    """, fetch="all"
         )
 
-    res = db.cur.fetchall()
     res = [x[0] for x in res]
 
     words = await process_messages(res)
