@@ -16,28 +16,28 @@ async def activity_guild(db, guild_id, time_period, interval=None, time_zone: da
     # Define the time periods and intervals
     periods = {
         '1d': (now.replace(hour=0, minute=0, second=0, microsecond=0), datetime.timedelta(hours=1), '%H:%M'),
-        '3d': (now - datetime.timedelta(days=2), datetime.timedelta(days=1), '%H:%M'),
-        '5d': (now - datetime.timedelta(days=4), datetime.timedelta(days=1), '%m-%d'),
-        '1w': (now - datetime.timedelta(weeks=1), datetime.timedelta(days=1), '%m-%d'),
-        '2w': (now - datetime.timedelta(weeks=2), datetime.timedelta(days=1), '%m-%d'),
-        '1m': (now - datetime.timedelta(days=30), datetime.timedelta(days=1), '%m-%d'),
-        '3m': (now - datetime.timedelta(days=90), datetime.timedelta(days=30), '%m-%d'),
-        '6m': (now - datetime.timedelta(days=180), datetime.timedelta(days=30), '%m-%d'),
-        '9m': (now - datetime.timedelta(days=270), datetime.timedelta(days=30), '%m-%d'),
-        '1y': (now - datetime.timedelta(days=365), datetime.timedelta(days=30), '%Y-%m'),
-        '2y': (now - datetime.timedelta(days=365 * 2), datetime.timedelta(days=90), '%Y-%m'),
-        '3y': (now - datetime.timedelta(days=365 * 3), datetime.timedelta(days=90), '%Y-%m'),
-        '5y': (now - datetime.timedelta(days=365 * 5), datetime.timedelta(days=180), '%Y-%m'),
-        'all': (datetime.datetime(2015, 4, 1, tzinfo=time_zone), datetime.timedelta(days=365), '%Y-%m')
+        '3d': (now - datetime.timedelta(days=2), datetime.timedelta(days=1), '%d-%m'),
+        '5d': (now - datetime.timedelta(days=4), datetime.timedelta(days=1), '%d-%m'),
+        '1w': (now - datetime.timedelta(weeks=1), datetime.timedelta(days=1), '%d-%m'),
+        '2w': (now - datetime.timedelta(weeks=2), datetime.timedelta(days=1), '%d-%m'),
+        '1m': (now - datetime.timedelta(days=30), datetime.timedelta(days=1), '%d-%m'),
+        '3m': (now - datetime.timedelta(days=90), datetime.timedelta(days=30), '%m-%Y'),    # todo shows 4 months
+        '6m': (now - datetime.timedelta(days=180), datetime.timedelta(days=30), '%m-%Y'),   # todo shows 7 months
+        '9m': (now - datetime.timedelta(days=270), datetime.timedelta(days=30), '%m-%Y'),
+        '1y': (now - datetime.timedelta(days=365), datetime.timedelta(days=30), '%m-%Y'),
+        '2y': (now - datetime.timedelta(days=365 * 2), datetime.timedelta(days=90), '%m-%Y'),
+        '3y': (now - datetime.timedelta(days=365 * 3), datetime.timedelta(days=90), '%Y'),
+        '5y': (now - datetime.timedelta(days=365 * 5), datetime.timedelta(days=180), '%Y'),
+        'all': (datetime.datetime(2015, 4, 1, tzinfo=time_zone), datetime.timedelta(days=365), '%Y')
     }
 
     start_time, _, label_format = periods.get(time_period)
+    start_time_unix = int(start_time.timestamp())
 
     # Determine the interval based on the provided or default value
     if interval is None:
         # Retrieve the start time, interval, and label format based on the time period
         interval = _
-        start_time_unix = int(start_time.timestamp())
 
         print(interval)
 
@@ -50,18 +50,13 @@ async def activity_guild(db, guild_id, time_period, interval=None, time_zone: da
         elif interval == "years":
             interval = datetime.timedelta(days=365)
 
-        # Retrieve the start time, interval, and label format based on the time period
-        start_time_unix = int(start_time.timestamp())
-
         # get the label format based on the interval
         if interval.days >= 365:
-            label_format = '%Y-%m'
+            label_format = '%m-%Y'
         elif interval.days >= 30:
-            label_format = '%m-%d'
+            label_format = '%d-%m'
         else:
             label_format = '%H:%M'
-
-        print(interval, label_format)
 
     interval_hours = interval.total_seconds() / 3600
 
@@ -128,8 +123,7 @@ async def activity_guild_visual(db: DB, guild_id: int, time_period: int, interva
     plt.tight_layout()
 
     # apply glow effects
-    mplcyberpunk.make_lines_glow()
-    mplcyberpunk.add_gradient_fill(alpha_gradientglow=0.5)
+    mplcyberpunk.add_glow_effects()
 
     name = random.randint(1, 100000000)
     plt.savefig(f"{name}.png", format='png', dpi=400, bbox_inches="tight")
