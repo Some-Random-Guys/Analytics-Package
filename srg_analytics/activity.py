@@ -5,13 +5,13 @@ import datetime
 import matplotlib.pyplot as plt
 
 
-async def activity_guild(db, guild_id, time_period, interval=None, time_zone: datetime.timezone = None):
+async def activity_guild(db, guild_id, time_period, interval=None, timezone: datetime.timezone = None):
 
     # If there is no time zone, set it to UTC+3
-    if time_zone is None:
-        time_zone = datetime.timezone(datetime.timedelta(hours=3))
+    if timezone is None:
+        timezone = datetime.timezone(datetime.timedelta(hours=3))
 
-    now = datetime.datetime.now(time_zone)
+    now = datetime.datetime.now(timezone)
 
     # Define the time periods and intervals
     periods = {
@@ -26,12 +26,15 @@ async def activity_guild(db, guild_id, time_period, interval=None, time_zone: da
         '9m': (now - datetime.timedelta(days=270), datetime.timedelta(days=30), '%m-%Y'),
         '1y': (now - datetime.timedelta(days=365), datetime.timedelta(days=30), '%m-%Y'),
         '2y': (now - datetime.timedelta(days=365 * 2), datetime.timedelta(days=90), '%m-%Y'),
-        '3y': (now - datetime.timedelta(days=365 * 3), datetime.timedelta(days=90), '%Y'),
+        '3y': (now - datetime.timedelta(days=365 * 3), datetime.timedelta(days=90), '%Y'),  # todo shows 4 years
         '5y': (now - datetime.timedelta(days=365 * 5), datetime.timedelta(days=180), '%Y'),
-        'all': (datetime.datetime(2015, 4, 1, tzinfo=time_zone), datetime.timedelta(days=365), '%Y')
+        'all': (datetime.datetime(2015, 4, 1, tzinfo=timezone), datetime.timedelta(days=365), '%Y')
     }
 
-    start_time, _, label_format = periods.get(time_period)
+    try:
+        start_time, _, label_format = periods.get(time_period)
+    except TypeError:
+        raise ValueError(f"Invalid time period: {time_period}")
     start_time_unix = int(start_time.timestamp())
 
     # Determine the interval based on the provided or default value
@@ -43,19 +46,26 @@ async def activity_guild(db, guild_id, time_period, interval=None, time_zone: da
 
     else:
         # interval can be `hours`, `days`, `weeks`, `months`, or `years`
-        if interval in ["hours", "days", "weeks"]:
+        if interval in ["hours", "days"]:
             interval = datetime.timedelta(**{f'{interval}': 1})
+        elif interval == "weeks":
+            interval = datetime.timedelta(days=7)
         elif interval == "months":
             interval = datetime.timedelta(days=30)
         elif interval == "years":
             interval = datetime.timedelta(days=365)
 
-        # get the label format based on the interval
-        if interval.days >= 365:
+        # if interval is years
+        if interval.days == 365:
             label_format = '%m-%Y'
-        elif interval.days >= 30:
+        # if interval is months
+        elif interval.days == 30:
+            label_format = '%m-%Y'
+        # if interval is weeks
+        elif interval.days == 7:
             label_format = '%d-%m'
-        else:
+        # if interval is days
+        elif interval.days == 1:
             label_format = '%H:%M'
 
     interval_hours = interval.total_seconds() / 3600
@@ -103,7 +113,7 @@ async def activity_user(guild_id: int, time_period: str):
     pass
 
 
-async def activity_guild_visual(db: DB, guild_id: int, time_period: int, interval: str = None,
+async def activity_guild_visual(db: DB, guild_id: int, time_period: str, interval: str = None,
                                 timezone: datetime.timezone = None):
     x, y = await activity_guild(db, guild_id, time_period, interval, timezone)
     plt.style.use("cyberpunk")
@@ -112,7 +122,7 @@ async def activity_guild_visual(db: DB, guild_id: int, time_period: int, interva
     plt.plot(x, y, "-o")
 
     # Add labels and title
-    plt.xlabel('Time')
+    plt.xlabel("Timeperiod")
     plt.ylabel('Message Count')
     plt.title(f'Activity Graph ({time_period})')
 
