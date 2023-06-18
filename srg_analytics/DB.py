@@ -21,7 +21,7 @@ class DB:
             user=self.db_credentials.user,
             password=self.db_credentials.password,
             db=self.db_credentials.name,
-            autocommit=True,
+            autocommit=True
         )
 
         await self._create_data_table()
@@ -165,11 +165,8 @@ class DB:
             async with self.con.acquire() as conn:
                 async with conn.cursor() as cur:
                     await cur.execute(
-                        "INSERT IGNORE INTO `config` (_key, data1, data2) VALUES ('channel_ignore', ?, ?);",
-                        (
-                            guild_id,
-                            channel_id,
-                        ),
+                        "INSERT IGNORE INTO `config` (_key, data1, data2) VALUES ('channel_ignore', %s, %s);",
+                        (guild_id, channel_id,),
                     )
 
         # Ignore based on user_id
@@ -178,11 +175,8 @@ class DB:
             async with self.con.acquire() as conn:
                 async with conn.cursor() as cur:
                     await cur.execute(
-                        "INSERT IGNORE INTO `config` (_key, data1, data2) VALUES ('user_ignore', ?, ?);",
-                        (
-                            guild_id,
-                            user_id,
-                        ),
+                        "INSERT IGNORE INTO `config` (_key, data1, data2) VALUES ('user_ignore', %s, %s);",
+                        (guild_id, user_id),
                     )
 
     async def remove_ignore(
@@ -197,11 +191,8 @@ class DB:
             async with self.con.acquire() as conn:
                 async with conn.cursor() as cur:
                     await cur.execute(
-                        "DELETE FROM `config` WHERE _key = 'channel_ignore' AND data1 = ? AND data2 = ?;",
-                        (
-                            guild_id,
-                            channel_id,
-                        ),
+                        "DELETE FROM `config` WHERE _key = 'channel_ignore' AND data1 = %s AND data2 = %s;",
+                        (guild_id, channel_id),
                     )
 
         # Ignore based on user_id
@@ -210,11 +201,8 @@ class DB:
             async with self.con.acquire() as conn:
                 async with conn.cursor() as cur:
                     await cur.execute(
-                        "DELETE FROM `config` WHERE _key = 'user_ignore' AND data1 = ? AND data2 = ?;",
-                        (
-                            guild_id,
-                            user_id,
-                        ),
+                        "DELETE FROM `config` WHERE _key = 'user_ignore' AND data1 = %s AND data2 = %s;",
+                        (guild_id, user_id),
                     )
 
     async def get_ignore_list(self, type_: str, guild_id: int = None) -> dict or list:
@@ -225,7 +213,7 @@ class DB:
             async with self.con.acquire() as conn:
                 async with conn.cursor() as cur:
                     await cur.execute(
-                        "SELECT data1, data2 FROM `config` WHERE _key = ? AND data1 = ?;",
+                        "SELECT data1, data2 FROM `config` WHERE _key = %s AND data1 = %s;",
                         (f"{type_}_ignore", guild_id),
                     )
 
@@ -242,7 +230,7 @@ class DB:
             async with self.con.acquire() as conn:
                 async with conn.cursor() as cur:
                     await cur.execute(
-                        "SELECT data1, data2 FROM `config` WHERE _key = ?;",
+                        "SELECT data1, data2 FROM `config` WHERE _key = %s;",
                         (f"{type_}_ignore",),
                     )
 
@@ -266,7 +254,7 @@ class DB:
         async with self.con.acquire() as conn:
             async with conn.cursor() as cur:
                 await cur.execute(
-                    "INSERT IGNORE INTO `config` (_key, data1, data2, data3) VALUES ('alias', ?, ?, ?);",
+                    "INSERT IGNORE INTO `config` (_key, data1, data2, data3) VALUES ('alias', %s, %s, %s);",
                     (guild_id, user_id, alias_id),
                 )
 
@@ -274,7 +262,7 @@ class DB:
         async with self.con.acquire() as conn:
             async with conn.cursor() as cur:
                 await cur.execute(
-                    "DELETE FROM `config` WHERE _key = 'alias' AND data1 = ? AND data2 = ? AND data3 = ?;",
+                    "DELETE FROM `config` WHERE _key = 'alias' AND data1 = %s AND data2 = %s AND data3 = %s;",
                     (guild_id, user_id, alias_id),
                 )
 
@@ -329,7 +317,7 @@ class DB:
             async with self.con.acquire() as conn:
                 async with conn.cursor() as cur:
                     await cur.execute(
-                        "SELECT data2, data3 FROM `config` WHERE _key = 'alias' AND data1 = ?;",
+                        "SELECT data2, data3 FROM `config` WHERE _key = 'alias' AND data1 = %s;",
                         (guild_id,),
                     )
 
@@ -364,37 +352,37 @@ class DB:
                         f"SELECT COUNT(*) FROM `{guild_id}`",
                     )
 
-                    return await cur.fetchone()[0]
+                    return (await cur.fetchone())[0]
 
         elif channel_id is not None and user_id is None:
             async with self.con.acquire() as conn:
                 async with conn.cursor() as cur:
                     await cur.execute(
-                        f"SELECT COUNT(*) FROM `{guild_id}` WHERE channel_id = ?;",
+                        f"SELECT COUNT(*) FROM `{guild_id}` WHERE channel_id = %s;",
                         (channel_id,),
                     )
 
-                    return await cur.fetchone()[0]
+                    return (await cur.fetchone())[0]
 
         elif channel_id is None and user_id is not None:
             async with self.con.acquire() as conn:
                 async with conn.cursor() as cur:
                     await cur.execute(
-                        f"SELECT COUNT(*) FROM `{guild_id}` WHERE author_id = ?;",
+                        f"SELECT COUNT(*) FROM `{guild_id}` WHERE author_id = %s;",
                         (user_id,),
                     )
 
-                    return await cur.fetchone()[0]
+                    return (await cur.fetchone())[0]
 
         else:
             async with self.con.acquire() as conn:
                 async with conn.cursor() as cur:
                     await cur.execute(
-                        f"SELECT COUNT(*) FROM `{guild_id}` WHERE channel_id = ? AND author_id = ?;",
+                        f"SELECT COUNT(*) FROM `{guild_id}` WHERE channel_id = %s AND author_id = %s;",
                         (channel_id, user_id),
                     )
 
-                    return await cur.fetchone()[0]
+                    return (await cur.fetchone())[0]
 
     async def get_mentions(self, guild_id: int, user_id: int) -> list[int]:
         """Returns all the instances where mentions are not empty, where user_id;"""
@@ -402,7 +390,7 @@ class DB:
             async with self.con.acquire() as conn:
                 async with conn.cursor() as cur:
                     await cur.execute(
-                        f"SELECT mentions FROM `{guild_id}` WHERE author_id = ? AND mentions IS NOT NULL;",
+                        f"SELECT mentions FROM `{guild_id}` WHERE author_id = %s AND mentions IS NOT NULL;",
                         (user_id,),
                     )
 
@@ -448,7 +436,7 @@ class DB:
             async with self.con.acquire() as conn:
                 async with conn.cursor() as cur:
                     await cur.execute(
-                        f"SELECT message_content FROM `{guild_id}` WHERE channel_id = ? AND message_content IS NOT NULL;",
+                        f"SELECT message_content FROM `{guild_id}` WHERE channel_id = %s AND message_content IS NOT NULL;",
                         (channel_id,),
                     )
 
@@ -458,7 +446,7 @@ class DB:
             async with self.con.acquire() as conn:
                 async with conn.cursor() as cur:
                     await cur.execute(
-                        f"SELECT message_content FROM `{guild_id}` WHERE author_id = ? AND message_content IS NOT NULL;",
+                        f"SELECT message_content FROM `{guild_id}` WHERE author_id = %s AND message_content IS NOT NULL;",
                         (user_id,),
                     )
 
@@ -468,7 +456,7 @@ class DB:
             async with self.con.acquire() as conn:
                 async with conn.cursor() as cur:
                     await cur.execute(
-                        f"SELECT message_content FROM `{guild_id}` WHERE channel_id = ? AND author_id = ? AND message_content IS NOT NULL;",
+                        f"SELECT message_content FROM `{guild_id}` WHERE channel_id = %s AND author_id = %s AND message_content IS NOT NULL;",
                         (channel_id, user_id),
                     )
 
