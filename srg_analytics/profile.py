@@ -1,3 +1,4 @@
+import time
 from collections import Counter
 from .DB import DB
 import emoji
@@ -104,6 +105,8 @@ async def get_character_count(db_or_msgs: DB | list[str], guild_id: int, user_id
 
 async def build_profile(db: DB, guild_id: int, user_id: int) -> Profile:
     """Builds the profile for a certain user, in a certain guild."""
+    start_time = time.time()
+
     profile = Profile()
 
     profile.user_id = user_id
@@ -128,5 +131,7 @@ async def build_profile(db: DB, guild_id: int, user_id: int) -> Profile:
     # most_mentioned_by_ = await most_mentioned_by(db, guild_id, user_id)
     # profile.most_mentioned_by = most_mentioned_by_[0]
     # profile.no_of_times_most_mentioned_by = most_mentioned_by_[1]
+
+    profile.time_taken = time.time() - start_time
 
     return profile
