@@ -11,8 +11,9 @@ class DB:
     def __init__(self, db_credentials: DbCreds):
         self.con = None
         self.db_credentials: DbCreds = db_credentials
+        self.is_connected = False
 
-        asyncio.create_task(self.connect())
+        asyncio.create_task(self.connect())  # this doesn't work
 
     async def connect(self):
         self.con = await aiomysql.create_pool(
@@ -23,6 +24,8 @@ class DB:
             db=self.db_credentials.name,
             autocommit=True
         )
+
+        self.is_connected = True
 
         await self._create_data_table()
 
@@ -436,7 +439,8 @@ class DB:
             async with self.con.acquire() as conn:
                 async with conn.cursor() as cur:
                     await cur.execute(
-                        f"SELECT message_content FROM `{guild_id}` WHERE channel_id = %s AND message_content IS NOT NULL;",
+                        f"SELECT message_content FROM `{guild_id}` WHERE channel_id = %s AND message_content IS NOT "
+                        f"NULL;",
                         (channel_id,),
                     )
 
@@ -456,7 +460,8 @@ class DB:
             async with self.con.acquire() as conn:
                 async with conn.cursor() as cur:
                     await cur.execute(
-                        f"SELECT message_content FROM `{guild_id}` WHERE channel_id = %s AND author_id = %s AND message_content IS NOT NULL;",
+                        f"SELECT message_content FROM `{guild_id}` WHERE channel_id = %s AND author_id = %s AND "
+                        f"message_content IS NOT NULL;",
                         (channel_id, user_id),
                     )
 
