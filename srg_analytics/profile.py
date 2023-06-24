@@ -1,5 +1,8 @@
 import time
 from collections import Counter
+
+import nltk
+
 from .DB import DB
 import emoji
 from .schemas import Profile
@@ -14,15 +17,23 @@ async def top_words(db_or_msgs: DB | list[str], guild_id: int, user_id: int = No
     """Returns the n most used words in a guild."""
 
     if isinstance(db_or_msgs, DB):
-        message_content: list[str] = await db_or_msgs.get_message_content(guild_id, user_id or None)
+        message_content: list[str] = await db_or_msgs.get_message_content(guild_id, user_id=user_id or None)
     else:
         message_content = db_or_msgs
 
     if not message_content:
         return None
 
+    stopwords = set(nltk.corpus.stopwords.words("english"))
+
     all_messages = " ".join(message_content)
-    word_counts = Counter(all_messages.split())
+    all_messages = all_messages.lower()
+
+    words = nltk.word_tokenize(all_messages)
+
+    words = (word for word in words if word.isalpha() and word not in stopwords)
+
+    word_counts = Counter(words)
 
     return dict(word_counts.most_common(amount))
 
@@ -103,6 +114,33 @@ async def get_character_count(db_or_msgs: DB | list[str], guild_id: int, user_id
     return len(all_messages)
 
 
+async def get_total_attachments(db: DB, guild_id: int, user_id: int) -> int:
+    """Returns the total number of attachments in a guild."""
+    return (await db.execute(
+        # select sum of all values in sum_attachments column
+        f"SELECT SUM(num_attachments) FROM `{guild_id}` WHERE author_id = ?",
+        (str(user_id),),
+        fetch="one")
+            )[0]
+
+
+async def get_total_embeds(db: DB, guild_id: int, user_id: int) -> int:
+    return (await db.execute(
+        f"SELECT COUNT(has_embed) FROM `{guild_id}` WHERE author_id = ?",
+        (str(user_id),),
+        fetch="one")
+            )[0]
+
+
+async def is_bot(db: DB, guild_id: int, user_id: int) -> bool:
+    """Returns whether a user is a bot or not."""
+    return (await db.execute(
+        f"SELECT is_bot FROM `{guild_id}` WHERE author_id = ? LIMIT 1",
+        (str(user_id),),
+        fetch="one")
+            )[0]
+
+
 async def build_profile(db: DB, guild_id: int, user_id: int) -> Profile:
     """Builds the profile for a certain user, in a certain guild."""
     start_time = time.time()
@@ -111,15 +149,20 @@ async def build_profile(db: DB, guild_id: int, user_id: int) -> Profile:
 
     profile.user_id = user_id
     profile.guild_id = guild_id
+    profile.is_bot = await is_bot(db, guild_id, user_id)
 
     msg_list = await db.get_message_content(guild_id, user_id=user_id)
 
     profile.messages = await total_message_count(db, guild_id, user_id)
     profile.words = await get_word_count(msg_list, guild_id, user_id)
     profile.characters = await get_character_count(msg_list, guild_id, user_id)
-    profile.average_msg_length = profile.characters / profile.messages # in chars
+    profile.average_msg_length = profile.characters / profile.messages  # in chars
 
+    profile.total_embeds = await get_total_embeds(db, guild_id, user_id)
+
+    profile.total_attachments = int(await get_total_attachments(db, guild_id, user_id))
     profile.top_words = await top_words(msg_list, guild_id, user_id)
+
     # profile.top_emojis = await top_emoji(msg_list, guild_id, user_id)
 
     # most_mentioned_ = await most_mentioned(db, guild_id, user_id)

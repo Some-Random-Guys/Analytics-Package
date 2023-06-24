@@ -101,7 +101,7 @@ class DB:
     async def execute(self, query, args=None, fetch=None):
         async with self.con.acquire() as conn:
             async with conn.cursor() as cur:
-                await cur.execute(query, args)
+                await cur.execute(query.replace("?", "%s"), args)
                 if fetch is None:
                     return
                 if fetch == "all":
