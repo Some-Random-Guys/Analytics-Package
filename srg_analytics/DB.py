@@ -172,6 +172,11 @@ class DB:
                         (guild_id, channel_id,),
                     )
 
+                    if update_existing:
+                        await cur.execute(
+                            f"DELETE FROM `{guild_id}` WHERE channel_id = {channel_id};"
+                        )
+
         # Ignore based on user_id
         elif user_id is not None:
             # Add to database
@@ -181,6 +186,13 @@ class DB:
                         "INSERT IGNORE INTO `config` (_key, data1, data2) VALUES ('user_ignore', %s, %s);",
                         (guild_id, user_id),
                     )
+
+                    if update_existing:
+                        await cur.execute(
+                            f"DELETE FROM `{guild_id}` WHERE author_id = {user_id};"
+                        )
+
+
 
     async def remove_ignore(
             self, guild_id: int, channel_id: int = None, user_id: int = None
@@ -253,13 +265,18 @@ class DB:
             }
             return res
 
-    async def add_user_alias(self, guild_id: int, user_id: int, alias_id: int):
+    async def add_user_alias(self, guild_id: int, user_id: int, alias_id: int, update_existing: bool = True):
         async with self.con.acquire() as conn:
             async with conn.cursor() as cur:
                 await cur.execute(
                     "INSERT IGNORE INTO `config` (_key, data1, data2, data3) VALUES ('alias', %s, %s, %s);",
                     (guild_id, user_id, alias_id),
                 )
+                if update_existing:
+                    # replace all existing aliases with the new one
+                    await cur.execute(
+                        f"UPDATE `{guild_id}` SET author_id = {user_id} WHERE author_id = {alias_id};"
+                    )
 
     async def remove_user_alias(self, guild_id: int, user_id: int, alias_id: int):
         async with self.con.acquire() as conn:
