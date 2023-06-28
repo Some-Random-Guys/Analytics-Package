@@ -156,8 +156,16 @@ class DB:
             async with conn.cursor() as cur:
                 await cur.execute(f"DELETE FROM `{guild_id}` WHERE message_id = {message_id};")
 
+    async def edit_message(self, guild_id: int, message_id: int, new_content: str):
+        async with self.con.acquire() as conn:
+            async with conn.cursor() as cur:
+                await cur.execute(
+                    f"UPDATE `{guild_id}` SET message_content = %s WHERE message_id = %s;",
+                    (new_content, message_id,),
+                )
+
     async def add_ignore(
-            self, guild_id: int, channel_id: int = None, user_id: int = None
+            self, guild_id: int, channel_id: int = None, user_id: int = None, update_existing: bool = False
     ):
         if channel_id is None and user_id is None:
             raise ValueError("channel_id and user_id cannot both be None")
