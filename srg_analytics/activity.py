@@ -1,11 +1,13 @@
 import random
+from typing import Tuple, Any, Dict, List
+
 from .DB import DB
 import mplcyberpunk
 import datetime
 import matplotlib.pyplot as plt
 
 
-async def activity_guild(db, guild_id, time_period, interval=None, timezone: datetime.timezone = None):
+async def _generate_timeperiod(time_period, timezone: datetime.timezone = None):
 
     # If there is no time zone, set it to UTC+3
     if timezone is None:
@@ -15,107 +17,152 @@ async def activity_guild(db, guild_id, time_period, interval=None, timezone: dat
 
     # Define the time periods and intervals
     periods = {
-        '1d': (now.replace(hour=0, minute=0, second=0, microsecond=0), datetime.timedelta(hours=1), '%H:%M'),
+        '1d': (now.replace(hour=0, minute=0, second=0, microsecond=0), datetime.timedelta(hours=1), '%H'),
         '3d': (now - datetime.timedelta(days=2), datetime.timedelta(days=1), '%d-%m'),
         '5d': (now - datetime.timedelta(days=4), datetime.timedelta(days=1), '%d-%m'),
         '1w': (now - datetime.timedelta(weeks=1), datetime.timedelta(days=1), '%d-%m'),
         '2w': (now - datetime.timedelta(weeks=2), datetime.timedelta(days=1), '%d-%m'),
         '1m': (now - datetime.timedelta(days=30), datetime.timedelta(days=1), '%d-%m'),
-        '3m': (now - datetime.timedelta(days=90), datetime.timedelta(days=30), '%m-%Y'),    # todo shows 4 months
-        '6m': (now - datetime.timedelta(days=180), datetime.timedelta(days=30), '%m-%Y'),   # todo shows 7 months
+        '3m': (now - datetime.timedelta(days=90), datetime.timedelta(days=29), '%m-%Y'),  # todo shows 4 months
+        '6m': (now - datetime.timedelta(days=178), datetime.timedelta(days=29), '%m-%Y'),
         '9m': (now - datetime.timedelta(days=270), datetime.timedelta(days=30), '%m-%Y'),
-        '1y': (now - datetime.timedelta(days=365), datetime.timedelta(days=30), '%m-%Y'),
-        '2y': (now - datetime.timedelta(days=365 * 2), datetime.timedelta(days=90), '%m-%Y'),
-        '3y': (now - datetime.timedelta(days=365 * 3), datetime.timedelta(days=90), '%Y'),  # todo shows 4 years
+        '1y': (now - datetime.timedelta(days=365), datetime.timedelta(days=30), '%m-%Y'),   # todo shows 13 months
+        '2y': (now - datetime.timedelta(days=365 * 2), datetime.timedelta(days=90), '%m-%Y'),  # todo shows 23 months
+        '3y': (now - datetime.timedelta(days=365 * 3), datetime.timedelta(days=89), '%Y'),  # todo shows 4 years
         '5y': (now - datetime.timedelta(days=365 * 5), datetime.timedelta(days=180), '%Y'),
         'all': (datetime.datetime(2015, 4, 1, tzinfo=timezone), datetime.timedelta(days=365), '%Y')
     }
 
     try:
-        start_time, _, label_format = periods.get(time_period)
+        start_time, interval, label_format = periods.get(time_period)
     except TypeError:
         raise ValueError(f"Invalid time period: {time_period}")
-    start_time_unix = int(start_time.timestamp())
-
-    # Determine the interval based on the provided or default value
-    if interval is None:
-        # Retrieve the start time, interval, and label format based on the time period
-        interval = _
-
-        print(interval)
-
-    else:
-        # interval can be `hours`, `days`, `weeks`, `months`, or `years`
-        if interval in ["hours", "days"]:
-            interval = datetime.timedelta(**{f'{interval}': 1})
-        elif interval == "weeks":
-            interval = datetime.timedelta(days=7)
-        elif interval == "months":
-            interval = datetime.timedelta(days=30)
-        elif interval == "years":
-            interval = datetime.timedelta(days=365)
-
-        # if interval is years
-        if interval.days == 365:
-            label_format = '%m-%Y'
-        # if interval is months
-        elif interval.days == 30:
-            label_format = '%m-%Y'
-        # if interval is weeks
-        elif interval.days == 7:
-            label_format = '%d-%m'
-        # if interval is days
-        elif interval.days == 1:
-            label_format = '%H:%M'
 
     interval_hours = interval.total_seconds() / 3600
 
-    # Fetch activity data from the database
-    query = f"SELECT FROM_UNIXTIME(epoch, '%Y-%m-%d %H:00:00') AS datetime, COUNT(*) AS count FROM `{guild_id}` WHERE epoch >= {start_time_unix} AND epoch <= UNIX_TIMESTAMP() GROUP BY datetime"
-    data = await db.execute(query, fetch="all")
+    return now, start_time, interval_hours, label_format
 
+async def _structure_data(data, start_time, time_period, label_format, timezone: datetime.timezone = None):
     # Group the data by the specified interval (hourly, daily, etc.)
     grouped_data = {}
     for row in data:
-        date = row[0]
-        date = datetime.datetime.strptime(date, '%Y-%m-%d %H:%M:%S')
-        if interval_hours < 1:
-            group_key = date.strftime(label_format)
-        else:
-            group_key = (date - datetime.timedelta(hours=date.hour % interval_hours)).strftime(label_format)
+        group_key = row[0]
         grouped_data.setdefault(group_key, 0)
         grouped_data[group_key] += row[1]
 
-    # Fill in all missing data points with 0
-    current_time = start_time
-    while current_time <= now:
-        key = current_time.strftime(label_format)
-        grouped_data.setdefault(key, 0)
-        current_time += interval
-
-    # If time_period is 1d, fill in values till 23 but keep them 0
+    # Fill in missing data points with 0
     if time_period == '1d':
         for i in range(24):
             key = (start_time + datetime.timedelta(hours=i)).strftime(label_format)
             grouped_data.setdefault(key, 0)
 
-    # Sort the data by date
-    grouped_data = dict(sorted(grouped_data.items(), key=lambda x: datetime.datetime.strptime(x[0], label_format)))
+    elif time_period == '3d':
+        for i in range(3):
+            key = (start_time + datetime.timedelta(days=i)).strftime(label_format)
+            grouped_data.setdefault(key, 0)
 
-    # Generate x-axis labels and values
-    x_labels = list(grouped_data.keys())
-    y_values = list(grouped_data.values())
+    elif time_period == '5d':
+        for i in range(5):
+            key = (start_time + datetime.timedelta(days=i)).strftime(label_format)
+            grouped_data.setdefault(key, 0)
+
+    elif time_period == '1w':
+        for i in range(7):
+            key = (start_time + datetime.timedelta(days=i)).strftime(label_format)
+            grouped_data.setdefault(key, 0)
+
+    elif time_period == '2w':
+        for i in range(14):
+            key = (start_time + datetime.timedelta(days=i)).strftime(label_format)
+            grouped_data.setdefault(key, 0)
+
+    elif time_period == '1m':
+        for i in range(30):
+            key = (start_time + datetime.timedelta(days=i)).strftime(label_format)
+            grouped_data.setdefault(key, 0)
+
+    elif time_period == '3m':
+        for i in range(90):
+            key = (start_time + datetime.timedelta(days=i)).strftime(label_format)
+            grouped_data.setdefault(key, 0)
+
+    elif time_period == '6m':
+        for i in range(180):
+            key = (start_time + datetime.timedelta(days=i)).strftime(label_format)
+            grouped_data.setdefault(key, 0)
+
+    elif time_period == '9m':
+        for i in range(270):
+            key = (start_time + datetime.timedelta(days=i)).strftime(label_format)
+            grouped_data.setdefault(key, 0)
+
+    elif time_period == '1y':
+        for i in range(365):
+            key = (start_time + datetime.timedelta(days=i)).strftime(label_format)
+            grouped_data.setdefault(key, 0)
+
+    elif time_period == '2y':
+        for i in range(730):
+            key = (start_time + datetime.timedelta(days=i)).strftime(label_format)
+            grouped_data.setdefault(key, 0)
+
+    elif time_period == '3y':
+        for i in range(1095):
+            key = (start_time + datetime.timedelta(days=i)).strftime(label_format)
+            grouped_data.setdefault(key, 0)
+
+    elif time_period == '5y':
+        for i in range(1825):
+            key = (start_time + datetime.timedelta(days=i)).strftime(label_format)
+            grouped_data.setdefault(key, 0)
+
+    elif time_period == 'all':
+        for i in range(365 * 5):
+            key = (start_time + datetime.timedelta(days=i)).strftime(label_format)
+            grouped_data.setdefault(key, 0)
+
+    # Sort the data by date
+    sorted_data = sorted(grouped_data.items(), key=lambda x: datetime.datetime.strptime(x[0], label_format))
+
+    # Split the data into x and y values
+    x = [row[0] for row in sorted_data]
+    y = [row[1] for row in sorted_data]
+
+    return x, y
+
+
+async def activity_guild(db, guild_id, time_period, timezone: datetime.timezone = None):
+
+    now, start_time, interval_hours, label_format = await _generate_timeperiod(time_period, timezone)
+
+    # Define the SQL query template
+    query_template = f"""
+        SELECT 
+            DATE_FORMAT(FROM_UNIXTIME(epoch), %s) AS datetime, 
+            COUNT(*) AS count 
+        FROM 
+            `{guild_id}` 
+        WHERE 
+            epoch >= %s AND epoch <= UNIX_TIMESTAMP() 
+        GROUP BY 
+            datetime
+    """
+
+    # Define the query parameters
+    query_params = (label_format.replace("%M", "%i"), start_time.timestamp(),)
+
+    # Execute the SQL query
+    data = await db.execute(query_template, query_params, fetch="all")
+
+    # Structure the data
+    x_labels, y_values = await _structure_data(data, start_time, time_period, label_format, timezone)
 
     return x_labels, y_values
 
 
-async def activity_user(guild_id: int, time_period: str):
-    pass
 
-
-async def activity_guild_visual(db: DB, guild_id: int, time_period: str, interval: str = None,
-                                timezone: datetime.timezone = None):
-    x, y = await activity_guild(db, guild_id, time_period, interval, timezone)
+async def activity_guild_visual(db: DB, guild_id: int, time_period: str, timezone: datetime.timezone = None):
+    x, y = await activity_guild(db, guild_id, time_period, timezone)
     plt.style.use("cyberpunk")
 
     # Plot the graph
