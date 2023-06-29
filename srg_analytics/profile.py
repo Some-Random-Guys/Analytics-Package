@@ -109,7 +109,7 @@ async def get_character_count(db_or_msgs: DB | list[str], guild_id: int, user_id
         message_content = db_or_msgs
 
     # get the number of characters in each message
-    all_messages = "".join(message_content).replace(" ", "")
+    all_messages = "".join(message_content)
 
     return len(all_messages)
 
