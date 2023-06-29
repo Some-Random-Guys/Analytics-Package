@@ -6,43 +6,40 @@ from .DB import DB
 from collections import Counter
 from .helpers import get_top_users_by_words, get_top_channels_by_words
 
-
+# todo add "other" to the graph
 async def get_top_users(db: DB, guild_id: int, type_: str, amount: int = 10):
     # type_ can be either "messages" or "words" or "characters"
 
     if type_ == "messages":
-        return await db.execute(
+        top = await db.execute(
             f"""
                 SELECT author_id, COUNT(author_id) AS count
-                FROM `{guild_id}` WHERE is_bot = 0
+                FROM `{guild_id}`
+                WHERE is_bot = 0
                 GROUP BY author_id
-                ORDER BY count DESC
-                LIMIT {amount};
+                ORDER BY count DESC;
             """, fetch="all"
         )
+
+        return [*top[:amount], ('others', sum([i[1] for i in top[amount:]]))]
+
 
     elif type_ == "words":
         return await get_top_users_by_words(db=db, guild_id=guild_id, amount=amount)
 
     elif type_ == "characters":
-        # get all messages
-        res = await db.execute(
+        top =  await db.execute(
             f"""
-                        SELECT author_id, message_content
-                        FROM `{guild_id}` WHERE is_bot = 0
-                    """, fetch="all"
+                SELECT author_id, SUM(CHAR_LENGTH(message_content)) AS count
+                FROM `{guild_id}`
+                WHERE is_bot = 0
+                GROUP BY author_id
+                ORDER BY count DESC;
+            """, fetch="all"
         )
 
-        # Count characters for each user
-        char_counts = Counter()
+        return [*top[:amount], ('others', sum([i[1] for i in top[amount:]]))]
 
-        for author_id, message in res:
-            char_counts[author_id] += len(message)
-
-        # Get the top users and their character counts
-        top_users = char_counts.most_common()
-
-        return top_users[:amount]
 
 
 async def get_top_users_visual(db: DB, guild_id: int, client, type_: str, amount: int = 10) -> str:
@@ -54,14 +51,17 @@ async def get_top_users_visual(db: DB, guild_id: int, client, type_: str, amount
     guild = await client.fetch_guild(guild_id)
 
     for i in res:
+        if i == res[-1]:
+            labels.append(f"Others | {i[1]}")
+            continue
         try:
             # get member
             member = await guild.fetch_member(i[0])
             # get nickname
-            labels.append(f"{member.nick or member.name} | {i[1]}")
+            labels.append(f"{member.nick or member.display_name} | {i[1]}")
 
         except Exception:
-            labels.append("Unknown User")
+            labels.append(f"Unknown User | {i[1]}")
 
     pie, texts, autotexts = plt.pie([value for _, value in res], labels=labels, autopct="%1.1f%%")
 

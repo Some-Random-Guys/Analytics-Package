@@ -87,9 +87,9 @@ async def get_top_users_by_words(db: DB, guild_id: int, channel_id: int = None, 
         word_counts[author_id] += len(words)
 
     # Get the top users and their word counts
-    top_users = word_counts.most_common()
+    top_users: list[tuple] = word_counts.most_common()
 
-    return top_users[:amount]
+    return [*top_users[:amount], ('others', sum([i[1] for i in top_users[amount:]]))]
 
 
 async def get_top_channels_by_words(db: DB, guild_id: int, amount: int = 10):
@@ -160,7 +160,7 @@ async def process_messages(messages):
     return words
 
 
-async def get_top_words(db: DB, guild_id: int, user_id: int = None, channel_id: int = None, amount: int = None):
+async def get_top_words(db: DB, guild_id: int, user_id: int = None, channel_id: int = None, amount: int = 10):
     if user_id is not None:
         res = await db.execute(
             f"""
