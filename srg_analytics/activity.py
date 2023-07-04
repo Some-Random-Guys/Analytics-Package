@@ -1,11 +1,27 @@
 import random
-from typing import Tuple, Any, Dict, List
+from typing import Any
 
 from .DB import DB
 import mplcyberpunk
 import datetime
 import matplotlib.pyplot as plt
 
+_days = {
+    # format - timeperiod: (days, number of data points)
+        '1d': (1, 24),
+        '3d': (3, 3),
+        '5d': (5, 5),
+        '1w': (7, 7),
+        '2w': (14, 14),
+        '1m': (30, 30),
+        '3m': (90, 3),
+        '6m': (180, 6),
+        '9m': (270, 9),
+        '1y': (365, 12),
+        '2y': (730, 24),
+        '3y': (1095, 3),
+        '5y': (1825, 5),
+    }
 
 async def _generate_timeperiod(time_period, timezone: datetime.timezone = None):
 
@@ -18,30 +34,29 @@ async def _generate_timeperiod(time_period, timezone: datetime.timezone = None):
     # Define the time periods and intervals
     periods = {
         # todo this will take days=30 for some reason when if it's set to anything else in 3m and above when format is %d-%m
-        '1d': (now.replace(hour=0, minute=0, second=0, microsecond=0), datetime.timedelta(hours=1), '%H'),
-        '3d': (now - datetime.timedelta(days=2), datetime.timedelta(days=1), '%d-%m'),
-        '5d': (now - datetime.timedelta(days=4), datetime.timedelta(days=1), '%d-%m'),
-        '1w': (now - datetime.timedelta(weeks=1), datetime.timedelta(days=1), '%d-%m'),
-        '2w': (now - datetime.timedelta(weeks=2), datetime.timedelta(days=1), '%d-%m'),
-        '1m': (now - datetime.timedelta(days=30), datetime.timedelta(days=1), '%d-%m'),
-        '3m': (now - datetime.timedelta(days=90), datetime.timedelta(days=29), '%m-%Y'),  # todo shows 4 months
-        '6m': (now - datetime.timedelta(days=178), datetime.timedelta(days=29), '%m-%Y'),
-        '9m': (now - datetime.timedelta(days=270), datetime.timedelta(days=30), '%m-%Y'),
-        '1y': (now - datetime.timedelta(days=365), datetime.timedelta(days=30), '%m-%Y'),   # todo shows 13 months
-        '2y': (now - datetime.timedelta(days=365 * 2), datetime.timedelta(days=90), '%m-%Y'),  # todo shows 23 months
-        '3y': (now - datetime.timedelta(days=365 * 3), datetime.timedelta(days=89), '%Y'),  # todo shows 4 years
-        '5y': (now - datetime.timedelta(days=365 * 5), datetime.timedelta(days=180), '%Y'),
-        'all': (datetime.datetime(2015, 4, 1, tzinfo=timezone), datetime.timedelta(days=365), '%Y')
+        '1d': (now.replace(hour=0, minute=0, second=0, microsecond=0), '%H'),
+        '3d': (now - datetime.timedelta(days=_days['3d'][0]), '%d-%m'),
+        '5d': (now - datetime.timedelta(days=_days['5d'][0]), '%d-%m'),
+        '1w': (now - datetime.timedelta(days=_days['1w'][0]), '%d-%m'),
+        '2w': (now - datetime.timedelta(days=_days['2w'][0]), '%d-%m'),
+        '1m': (now - datetime.timedelta(days=_days['1m'][0]), '%d-%m'),
+        '3m': (now - datetime.timedelta(days=_days['3m'][0]), '%m-%Y'),
+        '6m': (now - datetime.timedelta(days=_days['6m'][0]), '%m-%Y'),
+        '9m': (now - datetime.timedelta(days=_days['9m'][0]), '%m-%Y'),
+        '1y': (now - datetime.timedelta(days=_days['1y'][0]), '%m-%Y'),
+        '2y': (now - datetime.timedelta(days=_days['2y'][0]), '%m-%Y'),
+        '3y': (now - datetime.timedelta(days=_days['3y'][0]), '%Y'),
+        '5y': (now - datetime.timedelta(days=_days['5y'][0]), '%Y'),
+        'all': (datetime.datetime(2015, 4, 1, tzinfo=timezone), '%Y')
     }
 
     try:
-        start_time, interval, label_format = periods.get(time_period)
+        start_time, label_format = periods.get(time_period)
     except TypeError:
         raise ValueError(f"Invalid time period: {time_period}")
 
-    interval_hours = interval.total_seconds() / 3600
 
-    return now, start_time, interval_hours, label_format
+    return now, start_time, label_format
 
 async def _structure_data(data, start_time, time_period, label_format, timezone: datetime.timezone = None):
     # Group the data by the specified interval (hourly, daily, etc.)
@@ -130,12 +145,19 @@ async def _structure_data(data, start_time, time_period, label_format, timezone:
     x = [row[0] for row in sorted_data]
     y = [row[1] for row in sorted_data]
 
+    # if there are extra values, pop the start values to make length == time_period
+    if time_period != "all":
+        if len(y) > _days[time_period][1]:
+            y = y[len(y) - (_days[time_period][1]):]
+            x = x[len(x) - (_days[time_period][1]):]
+
+
     return x, y
 
 
 async def activity_guild(db, guild_id, time_period, timezone: datetime.timezone = None):
 
-    now, start_time, interval_hours, label_format = await _generate_timeperiod(time_period, timezone)
+    now, start_time, label_format = await _generate_timeperiod(time_period, timezone)
 
     # Define the SQL query template
     query_template = f"""
@@ -203,7 +225,7 @@ async def activity_user(
 ) -> tuple[tuple[Any, ...] | None, dict[int, list[Any]]]:
     # user_list is a list of user ids
 
-    now, start_time, interval_hours, label_format = await _generate_timeperiod(time_period, timezone)
+    now, start_time, label_format = await _generate_timeperiod(time_period, timezone)
 
     x_labels = None
     y_values = {}
