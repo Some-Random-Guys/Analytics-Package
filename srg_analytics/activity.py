@@ -17,6 +17,7 @@ async def _generate_timeperiod(time_period, timezone: datetime.timezone = None):
 
     # Define the time periods and intervals
     periods = {
+        # todo this will take days=30 for some reason when if it's set to anything else in 3m and above when format is %d-%m
         '1d': (now.replace(hour=0, minute=0, second=0, microsecond=0), datetime.timedelta(hours=1), '%H'),
         '3d': (now - datetime.timedelta(days=2), datetime.timedelta(days=1), '%d-%m'),
         '5d': (now - datetime.timedelta(days=4), datetime.timedelta(days=1), '%d-%m'),
@@ -121,6 +122,7 @@ async def _structure_data(data, start_time, time_period, label_format, timezone:
             key = (start_time + datetime.timedelta(days=i)).strftime(label_format)
             grouped_data.setdefault(key, 0)
 
+
     # Sort the data by date
     sorted_data = sorted(grouped_data.items(), key=lambda x: datetime.datetime.strptime(x[0], label_format))
 
@@ -165,25 +167,121 @@ async def activity_guild_visual(db: DB, guild_id: int, time_period: str, timezon
     x, y = await activity_guild(db, guild_id, time_period, timezone)
     plt.style.use("cyberpunk")
 
-    # Plot the graph
-    plt.plot(x, y, "-o")
+    try:
+        # Plot the graph
+        plt.plot(x, y, "-o")
 
-    # Add labels and title
-    plt.xlabel("Timeperiod")
-    plt.ylabel('Message Count')
-    plt.title(f'Activity Graph ({time_period})')
+        # Add labels and title
+        plt.xlabel("Timeperiod")
+        plt.ylabel('Message Count')
+        plt.title(f'Activity Graph ({time_period})')
 
-    # Rotate x-axis labels
-    plt.xticks(rotation=45)
+        # Rotate x-axis labels
+        plt.xticks(rotation=45)
 
-    plt.grid(True)
-    plt.tight_layout()
+        plt.grid(True)
+        plt.tight_layout()
 
-    # apply glow effects
-    mplcyberpunk.add_glow_effects()
+        # apply glow effects
+        mplcyberpunk.add_glow_effects()
 
-    name = random.randint(1, 100000000)
-    plt.savefig(f"{name}.png", format='png', dpi=400, bbox_inches="tight")
-    plt.close()
+        name = random.randint(1, 100000000)
+        plt.savefig(f"{name}.png", format='png', dpi=400, bbox_inches="tight")
+        plt.close()
 
-    return f"{name}.png"
+        return f"{name}.png"
+
+    except Exception as e:
+        print(e)
+        plt.close()
+
+        return None
+
+
+async def activity_user(
+        db: DB, guild_id: int, user_list: list[int], time_period: str, timezone: datetime.timezone = None
+) -> tuple[tuple[Any, ...] | None, dict[int, list[Any]]]:
+    # user_list is a list of user ids
+
+    now, start_time, interval_hours, label_format = await _generate_timeperiod(time_period, timezone)
+
+    x_labels = None
+    y_values = {}
+
+    for user_id in user_list:
+
+        # Define the SQL query template
+        query_template = f"""
+            SELECT 
+                DATE_FORMAT(FROM_UNIXTIME(epoch), %s) AS datetime, 
+                COUNT(*) AS count
+            FROM 
+                `{guild_id}`
+            WHERE
+                epoch >= %s AND epoch <= UNIX_TIMESTAMP() AND author_id = %s
+            GROUP BY
+                datetime
+        """
+
+        # Define the query parameters
+        query_params = (label_format.replace("%M", "%i"), start_time.timestamp(), user_id,)
+
+        # Execute the SQL query
+        data = await db.execute(query_template, query_params, fetch="all")
+
+        # Structure the data
+        x, y = await _structure_data(data, start_time, time_period, label_format, timezone)
+
+        # Add the data to the graph
+        if x_labels is None:
+            x_labels = tuple(x)
+        y_values[user_id] = y
+
+    return x_labels, y_values
+
+async def activity_user_visual(db: DB, guild_id: int, user_list: list, time_period: str, timezone: datetime.timezone = None):
+
+    usernames = [user[0] for user in user_list]
+    user_ids = [user[1] for user in user_list]
+
+    x, y = await activity_user(db, guild_id, user_ids, time_period, timezone)
+    plt.style.use("cyberpunk")
+    try:
+        # y is a dict of user_id: y_values
+        for user_id, y_values in y.items():
+            print(x, y_values)
+
+            plt.plot(x, y_values, "-o", label=f"{usernames[user_ids.index(user_id)]}")
+
+        # Add labels and title
+        plt.xlabel("Timeperiod")
+        plt.ylabel('Message Count')
+        plt.title(f'Activity Graph ({time_period})')
+
+        # Rotate x-axis labels
+        plt.xticks(rotation=45)
+
+        plt.grid(True)
+        plt.tight_layout()
+        plt.legend()
+
+        # apply glow effects
+        mplcyberpunk.add_glow_effects()
+
+        name = random.randint(1, 100000000)
+        plt.savefig(f"{name}.png", format='png', dpi=400, bbox_inches="tight")
+        plt.close()
+
+        return f"{name}.png"
+    except Exception as e:
+        print(e)
+        plt.close()
+        return None
+
+
+
+
+
+
+
+
