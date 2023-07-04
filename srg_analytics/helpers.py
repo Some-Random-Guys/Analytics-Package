@@ -64,7 +64,7 @@ def get_words_from_user(db_or_msgs: DB | list, guild_id: int = None, user_id: in
     return words
 
 
-async def get_top_users_by_words(db: DB, guild_id: int, channel_id: int = None, amount: int = 10):
+async def get_top_users_by_words(db: DB, guild_id: int, channel_id: int = None, amount: int = 10, count_others = True):
     if channel_id is None:
         res = await db.execute(
             f"""
@@ -87,9 +87,13 @@ async def get_top_users_by_words(db: DB, guild_id: int, channel_id: int = None, 
         word_counts[author_id] += len(words)
 
     # Get the top users and their word counts
-    top_users: list[tuple] = word_counts.most_common()
+    # noinspection PyTypeChecker
+    top_users: list[tuple[int, int]] = word_counts.most_common()
 
-    return [*top_users[:amount], ('others', sum([i[1] for i in top_users[amount:]]))]
+    if count_others:
+        return [*top_users[:amount], ('others', sum([i[1] for i in top_users[amount:]]))]
+    else:
+        return top_users[:amount]
 
 
 async def get_top_channels_by_words(db: DB, guild_id: int, amount: int = 10):

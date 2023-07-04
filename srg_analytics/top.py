@@ -6,26 +6,30 @@ from .DB import DB
 from collections import Counter
 from .helpers import get_top_users_by_words, get_top_channels_by_words
 
-# todo add "other" to the graph
-async def get_top_users(db: DB, guild_id: int, type_: str, amount: int = 10):
+async def get_top_users(db: DB, guild_id: int, type_: str, amount: int = 10, count_others: bool = True):
     # type_ can be either "messages" or "words" or "characters"
 
     if type_ == "messages":
-        top = await db.execute(
-            f"""
+        query = f"""
                 SELECT author_id, COUNT(author_id) AS count
                 FROM `{guild_id}`
                 WHERE is_bot = 0
                 GROUP BY author_id
-                ORDER BY count DESC;
-            """, fetch="all"
-        )
+                ORDER BY count DESC
+            """
+        if not count_others:
+            query += f"LIMIT {amount}"
 
-        return [*top[:amount], ('others', sum([i[1] for i in top[amount:]]))]
+        top = await db.execute(query, fetch="all")
+
+        if count_others:
+            return [*top[:amount], ('others', sum([i[1] for i in top[amount:]]))]
+        else:
+            return top[:amount]
 
 
     elif type_ == "words":
-        return await get_top_users_by_words(db=db, guild_id=guild_id, amount=amount)
+        return await get_top_users_by_words(db=db, guild_id=guild_id, amount=amount, count_others=count_others)
 
     elif type_ == "characters":
         top =  await db.execute(
@@ -34,12 +38,14 @@ async def get_top_users(db: DB, guild_id: int, type_: str, amount: int = 10):
                 FROM `{guild_id}`
                 WHERE is_bot = 0
                 GROUP BY author_id
-                ORDER BY count DESC;
+                ORDER BY count DESC
             """, fetch="all"
         )
 
-        return [*top[:amount], ('others', sum([i[1] for i in top[amount:]]))]
-
+        if count_others:
+            return [*top[:amount], ('others', sum([i[1] for i in top[amount:]]))]
+        else:
+            return top[:amount]
 
 
 async def get_top_users_visual(db: DB, guild_id: int, client, type_: str, amount: int = 10) -> str:
