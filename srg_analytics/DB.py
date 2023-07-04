@@ -50,6 +50,7 @@ class DB:
         # - guild_pause
         # - stopword
         # - alias
+        # - timezone
 
         # Format -
         # - channel_ignore:
@@ -69,6 +70,13 @@ class DB:
         #  - data1: guild_id
         #  - data2: user_id
         #  - data3: alias_id
+
+        # - timezone:
+        #  - _key: timezone
+        #  - data1: guild_id
+        #  - data2: user_id
+        #  - data3: timezone
+
 
     async def add_guild(self, guild_id):
         """Adds a guild (database), with boilerplate table."""
@@ -108,6 +116,8 @@ class DB:
                     return await cur.fetchall()
                 elif fetch == "one":
                     return await cur.fetchone()
+
+            await conn.commit()
 
     async def get(self, guild_id, selected: list = None):
         """Retrieves the guild from the database."""
@@ -365,6 +375,35 @@ class DB:
             }
 
             return res
+
+    async def set_timezone(self, guild_id: int, timezone: int):
+        # timezone here is an offset from UTC
+
+        if await self.execute(
+                f"SELECT data2 FROM `config` WHERE _key = 'timezone' AND data1 = '%s';",
+                (guild_id,), fetch="one"
+        ) is None:
+            await self.execute(
+                "INSERT INTO `config` (_key, data1, data2) VALUES ('timezone', %s, %s);",
+                (guild_id, timezone),
+            )
+            return
+
+        await self.execute(
+            "UPDATE `config` SET data2 = %s WHERE _key = 'timezone' AND data1 = %s;",
+            (timezone, guild_id),
+        )
+
+    async def get_timezone(self, guild_id: int):
+        res = await self.execute(f"SELECT data2 FROM `config` WHERE _key = 'timezone' AND data1 = '%s';",
+            (guild_id,), fetch="one")
+
+        if res is None:
+            return None
+
+        return res[0]
+
+
 
     # analysis functions
     async def get_message_count(
