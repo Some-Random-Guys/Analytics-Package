@@ -1,7 +1,7 @@
 """Functions for interacting with the database."""
 
 import aiomysql
-from .schemas import DbCreds, DataTemplate
+from .schemas import DbCreds
 import asyncio
 
 
@@ -137,7 +137,7 @@ class DB:
 
                 return await cur.fetchall()
 
-    async def add_message(self, guild_id, data: DataTemplate):
+    async def add_message(self, guild_id, data: tuple):
         async with self.con.acquire() as conn:
             async with conn.cursor() as cur:
                 await cur.execute(
@@ -145,20 +145,18 @@ class DB:
                         INSERT IGNORE INTO `{guild_id}` (message_id, channel_id, author_id, message_content, epoch, 
                         is_bot, has_embed, num_attachments, ctx_id, mentions)
                         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
+                    """, data
+                )
 
-                    """,
-                    (
-                        data.message_id,
-                        data.channel_id,
-                        data.author_id,
-                        data.message_content,
-                        data.epoch,
-                        data.is_bot,
-                        data.has_embed,
-                        data.num_attachments,
-                        data.ctx_id,
-                        data.mentions,
-                    ),
+    async def add_messages_bulk(self, guild_id, data: tuple):
+        async with self.con.acquire() as conn:
+            async with conn.cursor() as cur:
+                await cur.executemany(
+                    f"""
+                        INSERT IGNORE INTO `{guild_id}` (message_id, channel_id, author_id, message_content, epoch, 
+                        is_bot, has_embed, num_attachments, ctx_id, mentions)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
+                    """, data,
                 )
 
     async def delete_message(self, guild_id: int, message_id: int):
