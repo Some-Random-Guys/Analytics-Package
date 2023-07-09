@@ -7,30 +7,42 @@ class DbCreds:
         self.name = name
 
 
-class DataTemplate:
+class Message:
     def __init__(
         self,
+        guild_id,
+        message_id,
+        channel_id,
         author_id,
+        aliased_author_id,
+        message_content,
+        epoch,
+        edit_epoch,
         is_bot,
         has_embed,
-        channel_id,
-        epoch,
         num_attachments,
-        mentions,
         ctx_id,
-        message_content,
-        message_id,
+        user_mentions,
+        channel_mentions,
+        role_mentions,
+        reactions
     ):
+        self.guild_id: int = guild_id
         self.message_id: int = message_id
         self.channel_id: int = channel_id
         self.author_id: int = author_id
+        self.aliased_author_id: int = aliased_author_id
         self.message_content: str or None = message_content
         self.epoch: int = epoch
+        self.edit_epoch: int or None = edit_epoch
         self.is_bot: bool = is_bot
         self.has_embed: bool = has_embed
         self.num_attachments: int = num_attachments
         self.ctx_id = ctx_id
-        self.mentions = mentions
+        self.user_mentions = user_mentions
+        self.channel_mentions = channel_mentions
+        self.role_mentions = role_mentions
+        self.reactions = reactions
 
 
 class Profile:
