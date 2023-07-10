@@ -1,7 +1,7 @@
 """Functions for interacting with the database."""
 
 import aiomysql
-from .schemas import DbCreds
+from .schemas import DbCreds, Message
 import asyncio
 
 
@@ -88,13 +88,18 @@ class DB:
                 message_id BIGINT NOT NULL,
                 channel_id BIGINT NOT NULL,
                 author_id BIGINT NOT NULL,
+                aliased_author_id BIGINT,
                 message_content BLOB,
                 epoch BIGINT NOT NULL,
+                edit_epoch BIGINT,
                 is_bot BOOLEAN NOT NULL,
                 has_embed BOOLEAN NOT NULL,                       
                 num_attachments SMALLINT NOT NULL DEFAULT 0,
                 ctx_id BIGINT,
-                mentions TEXT,
+                user_mentions TEXT,
+                channel_mentions TEXT,
+                role_mentions TEXT,
+                reactions TEXT,
                 PRIMARY KEY (message_id)
                 );
                 """
@@ -105,6 +110,8 @@ class DB:
         async with self.con.acquire() as conn:
             async with conn.cursor() as cur:
                 await cur.execute(f"DROP TABLE IF EXISTS `{guild_id}`;")
+
+                await cur.execute(f"DELETE FROM config WHERE data1 = '{guild_id}';")
 
     async def execute(self, query, args=None, fetch=None):
         async with self.con.acquire() as conn:
@@ -137,26 +144,60 @@ class DB:
 
                 return await cur.fetchall()
 
-    async def add_message(self, guild_id, data: tuple):
+    async def add_message(self, guild_id, data: Message):
+        """Adds a message to the database."""
         async with self.con.acquire() as conn:
             async with conn.cursor() as cur:
                 await cur.execute(
                     f"""
-                        INSERT IGNORE INTO `{guild_id}` (message_id, channel_id, author_id, message_content, epoch, 
-                        is_bot, has_embed, num_attachments, ctx_id, mentions)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
-                    """, data
+                        INSERT IGNORE INTO `{guild_id}` (message_id, channel_id, author_id, aliased_author_id, message_content, epoch, 
+                        edit_epoch, is_bot, has_embed, num_attachments, ctx_id, user_mentions, channel_mentions, role_mentions, reactions)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
+                    """,
+                    (
+                        data.message_id,
+                        data.channel_id,
+                        data.author_id,
+                        data.aliased_author_id,
+                        data.message_content,
+                        data.epoch,
+                        data.edit_epoch,
+                        data.is_bot,
+                        data.has_embed,
+                        data.num_attachments,
+                        data.ctx_id,
+                        data.user_mentions,
+                        data.channel_mentions,
+                        data.role_mentions,
+                        data.reactions,
+                    ),
                 )
 
-    async def add_messages_bulk(self, guild_id, data: tuple):
+    async def add_messages_bulk(self, guild_id, data: Message):
         async with self.con.acquire() as conn:
             async with conn.cursor() as cur:
                 await cur.executemany(
                     f"""
-                        INSERT IGNORE INTO `{guild_id}` (message_id, channel_id, author_id, message_content, epoch, 
-                        is_bot, has_embed, num_attachments, ctx_id, mentions)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
-                    """, data,
+                        INSERT IGNORE INTO `{guild_id}` (message_id, channel_id, author_id, aliased_author_id, message_content, epoch, 
+                        edit_epoch, is_bot, has_embed, num_attachments, ctx_id, user_mentions, channel_mentions, role_mentions, reactions)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
+                    """, [(
+                        message.message_id,
+                        message.channel_id,
+                        message.author_id,
+                        message.aliased_author_id,
+                        message.message_content,
+                        message.epoch,
+                        message.edit_epoch,
+                        message.is_bot,
+                        message.has_embed,
+                        message.num_attachments,
+                        message.ctx_id,
+                        message.user_mentions,
+                        message.channel_mentions,
+                        message.role_mentions,
+                        message.reactions,
+                    ) for message in data]
                 )
 
     async def delete_message(self, guild_id: int, message_id: int):
@@ -164,12 +205,23 @@ class DB:
             async with conn.cursor() as cur:
                 await cur.execute(f"DELETE FROM `{guild_id}` WHERE message_id = {message_id};")
 
-    async def edit_message(self, guild_id: int, message_id: int, new_content: str):
+    async def edit_message(
+            self, guild_id: int, message_id: int, content: str, edit_epoch: int, user_mentions: str,
+            channel_mentions: str, role_mentions: str, num_attachments: int
+    ):
         async with self.con.acquire() as conn:
             async with conn.cursor() as cur:
                 await cur.execute(
-                    f"UPDATE `{guild_id}` SET message_content = %s WHERE message_id = %s;",
-                    (new_content, message_id,),
+                    f"UPDATE `{guild_id}` SET message_content = %s, edit_epoch = %s, user_mentions = %s, channel_mentions = %s, role_mentions = %s, num_attachments = %s WHERE message_id = %s;",
+                    (
+                        content,
+                        edit_epoch,
+                        user_mentions,
+                        channel_mentions,
+                        role_mentions,
+                        num_attachments,
+                        message_id,
+                    ),
                 )
 
     async def add_ignore(
