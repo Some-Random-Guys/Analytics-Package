@@ -1,8 +1,8 @@
 wordcloud==1.9.2
-matplotlib==3.7.1
+matplotlib==3.7.2
 mplcyberpunk==0.7.0
 aiomysql==0.2.0
 nltk==3.8.1
 validators==0.20.0
-emoji==2.5.1
+emoji==2.6.0
 chat_exporter==2.5.3
