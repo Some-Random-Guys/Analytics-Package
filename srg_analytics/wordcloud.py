@@ -12,7 +12,10 @@ async def wordcloud(db: DB, guild_id: int, user_id: int = None, channel_id: int 
     # top_words = [(word, count), (word, count), ...]
 
     # create a wordcloud
-    wordcloud = wc().generate_from_frequencies(dict(top_words))
+    try:
+        wordcloud = wc().generate_from_frequencies(dict(top_words))
+    except ValueError:
+        return None
     # apply glow effects
     mplcyberpunk.add_glow_effects()
 
