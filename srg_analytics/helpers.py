@@ -64,21 +64,20 @@ def get_words_from_user(db_or_msgs: DB | list, guild_id: int = None, user_id: in
     return words
 
 
-async def get_top_users_by_words(db: DB, guild_id: int, channel_id: int = None, amount: int = 10, count_others = True):
-    if channel_id is None:
-        res = await db.execute(
-            f"""
-                        SELECT author_id, message_content
-                        FROM `{guild_id}` WHERE is_bot = 0 AND message_content != ''
-                    """, fetch="all"
-        )
-    else:
-        res = await db.execute(
-            f"""
-                        SELECT author_id, message_content
-                        FROM `{guild_id}` WHERE is_bot = 0 AND message_content != '' AND channel_id = {channel_id}
-                    """, fetch="all"
-        )
+async def get_top_users_by_words(db: DB, guild_id: int, channel_id: int = None, amount: int = 10, start_epoch: int = None, count_others = True):
+
+    query = f"""
+            SELECT author_id, message_content
+            FROM `{guild_id}` WHERE is_bot = 0 AND message_content != ''
+            """
+
+    if channel_id is not None:
+        query += f"AND channel_id = {channel_id}"
+
+    if start_epoch is not None:
+        query += f"AND epoch >= {start_epoch}"
+
+    res = await db.execute(query, fetch="all")
 
     # Count words for each user
     word_counts = Counter()
