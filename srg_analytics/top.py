@@ -1,22 +1,55 @@
+import datetime
 import random
 import matplotlib.pyplot as plt
 import mplcyberpunk
+from collections import Counter
 
 from .DB import DB
-from collections import Counter
 from .helpers import get_top_users_by_words, get_top_channels_by_words
 
-async def get_top_users(db: DB, guild_id: int, type_: str, amount: int = 10, count_others: bool = True):
+async def get_top_users(db: DB, guild_id: int, type_: str, amount: int = 10, timeperiod: str = None, count_others: bool = True):
     # type_ can be either "messages" or "words" or "characters"
+    # time_duration can be either "day" or "week" or "month" or "year" or None
+
+    if timeperiod not in ["day", "week", "month", "year", None]:
+        raise ValueError("time_duration must be either 'day' or 'week' or 'month' or 'year' or None")
+    else:
+        timezone = await db.get_timezone(guild_id=guild_id)
+        if not timezone:
+            timezone = datetime.timezone(datetime.timedelta(hours=3))
+        else:
+            timezone = datetime.timezone(datetime.timedelta(hours=int(timezone)))
+
+    # get the earliest epoch start time for the time duration with timezone utc+3
+    if timeperiod == "day":
+        # get epoch of starting of the current day (consider timezone)
+        epoch_start = datetime.datetime.now(timezone).replace(hour=0, minute=0, second=0, microsecond=0)
+    elif timeperiod == "week":
+        # get epoch of starting of the current week (consider timezone)
+        epoch_start = datetime.datetime.now(timezone) - datetime.timedelta(days=7)
+    elif timeperiod == "month":
+        # get epoch of starting of the current month (consider timezone)
+        epoch_start = datetime.datetime.now(timezone).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    elif timeperiod == "year":
+        # get epoch of starting of the current year (consider timezone)
+        epoch_start = datetime.datetime.now(timezone).replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
+    else:
+        epoch_start = None
 
     if type_ == "messages":
         query = f"""
                 SELECT aliased_author_id, COUNT(aliased_author_id) AS count
                 FROM `{guild_id}`
                 WHERE is_bot = 0
+            """
+        if epoch_start is not None:
+            query += f"AND epoch >= {epoch_start.timestamp()}"
+
+        query += """
                 GROUP BY aliased_author_id
                 ORDER BY count DESC
-            """
+                """
+
         if not count_others:
             query += f"LIMIT {amount}"
 
@@ -27,20 +60,25 @@ async def get_top_users(db: DB, guild_id: int, type_: str, amount: int = 10, cou
         else:
             return top[:amount]
 
-
     elif type_ == "words":
-        return await get_top_users_by_words(db=db, guild_id=guild_id, amount=amount, count_others=count_others)
+        return await get_top_users_by_words(db=db, guild_id=guild_id, amount=amount, start_epoch=epoch_start.timestamp(), count_others=count_others)
 
     elif type_ == "characters":
-        top =  await db.execute(
-            f"""
+        query = f"""
                 SELECT aliased_author_id, SUM(CHAR_LENGTH(message_content)) AS count
                 FROM `{guild_id}`
                 WHERE is_bot = 0
+            """
+
+        if timeperiod is not None:
+            query += f"AND epoch >= {epoch_start.timestamp()}"
+
+        query +=  """
                 GROUP BY aliased_author_id
                 ORDER BY count DESC
-            """, fetch="all"
-        )
+                """
+
+        top =  await db.execute(query, fetch="all")
 
         if count_others:
             return [*top[:amount], ('others', sum([i[1] for i in top[amount:]]))]
@@ -48,8 +86,8 @@ async def get_top_users(db: DB, guild_id: int, type_: str, amount: int = 10, cou
             return top[:amount]
 
 
-async def get_top_users_visual(db: DB, guild_id: int, client, type_: str, amount: int = 10) -> str:
-    res = await get_top_users(db=db, guild_id=guild_id, type_=type_, amount=amount)
+async def get_top_users_visual(db: DB, guild_id: int, client, type_: str, timeperiod: str, amount: int = 10) -> str:
+    res = await get_top_users(db=db, guild_id=guild_id, type_=type_, timeperiod=timeperiod, amount=amount)
     plt.style.use("cyberpunk")
 
     # get member object from id and get their nickname, if not found, use "Deleted User"
@@ -77,7 +115,18 @@ async def get_top_users_visual(db: DB, guild_id: int, client, type_: str, amount
     for text in texts:
         text.set_color('white')
 
-    plt.title(f"Top {amount} Members by {type_}")
+    if timeperiod is None:
+        timeperiod = "All Time"
+    elif timeperiod == "day":
+        timeperiod = "today"
+    elif timeperiod == "week":
+        timeperiod = "this Week"
+    elif timeperiod == "month":
+        timeperiod = "this Month"
+    elif timeperiod == "year":
+        timeperiod = "this Year"
+
+    plt.title(f"Top {amount} Members by {type_.capitalize()} {timeperiod}")
 
     mplcyberpunk.add_glow_effects()
 
