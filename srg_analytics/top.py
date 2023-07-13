@@ -11,10 +11,10 @@ async def get_top_users(db: DB, guild_id: int, type_: str, amount: int = 10, cou
 
     if type_ == "messages":
         query = f"""
-                SELECT author_id, COUNT(author_id) AS count
+                SELECT aliased_author_id, COUNT(aliased_author_id) AS count
                 FROM `{guild_id}`
                 WHERE is_bot = 0
-                GROUP BY author_id
+                GROUP BY aliased_author_id
                 ORDER BY count DESC
             """
         if not count_others:
@@ -34,10 +34,10 @@ async def get_top_users(db: DB, guild_id: int, type_: str, amount: int = 10, cou
     elif type_ == "characters":
         top =  await db.execute(
             f"""
-                SELECT author_id, SUM(CHAR_LENGTH(message_content)) AS count
+                SELECT aliased_author_id, SUM(CHAR_LENGTH(message_content)) AS count
                 FROM `{guild_id}`
                 WHERE is_bot = 0
-                GROUP BY author_id
+                GROUP BY aliased_author_id
                 ORDER BY count DESC
             """, fetch="all"
         )
@@ -97,7 +97,7 @@ async def get_top_channels(db: DB, guild_id: int, type_: str, amount: int = 10):
     if type_ == "messages":
         return await db.execute(
             f"""
-                SELECT channel_id, COUNT(author_id) AS count
+                SELECT channel_id, COUNT(aliased_author_id) AS count
                 FROM `{guild_id}` WHERE is_bot = 0
                 GROUP BY channel_id
                 ORDER BY count DESC
