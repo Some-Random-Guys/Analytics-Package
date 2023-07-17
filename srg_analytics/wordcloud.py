@@ -8,7 +8,7 @@ from .helpers import get_top_words
 
 
 async def wordcloud(db: DB, guild_id: int, user_id: int = None, channel_id: int = None):
-    top_words = await get_top_words(db=db, guild_id=guild_id, user_id=user_id, channel_id=channel_id)
+    top_words = await get_top_words(db=db, guild_id=guild_id, user_id=user_id, channel_id=channel_id, amount=100)
     # top_words = [(word, count), (word, count), ...]
 
     # create a wordcloud
