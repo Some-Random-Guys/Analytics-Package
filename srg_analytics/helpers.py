@@ -152,13 +152,13 @@ async def process_messages(messages):
 
         for word in sentence:
             # if it is a mention
-            # if sentence[0:2] == "<@":
-            #     continue
+            if sentence[0:2] == "<@":
+                continue
 
             if len(word) <= 1:
                 continue
 
-            words.append(word)
+            words.append(word.lower())
 
     return words
 
