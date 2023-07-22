@@ -1,10 +1,12 @@
 import collections
+import time
 
 import nltk
 
 from .DB import DB
 from collections import Counter
 import validators
+from multiprocessing import Pool
 
 
 async def is_ignored(db: DB, channel_id: int = None, user_id: int = None):
@@ -114,10 +116,11 @@ async def get_top_channels_by_words(db: DB, guild_id: int, amount: int = 10):
 
     return top_channels[:amount]
 
+import nltk
+from multiprocessing import Pool
 
-async def process_messages(messages):
-    """Returns a list of all valid words when given a list of messages from the database."""
-    # all words from data
+def _process_batch(messages):
+    """Process a batch of messages and return a list of valid words."""
     words = []
 
     try:
@@ -129,13 +132,10 @@ async def process_messages(messages):
     for sentence in messages:
         sentence = sentence.decode("utf-8")
 
-        # if it is empty
         if sentence.strip() == "":
             continue
-        # if it is a codeblock
-        elif sentence[0:3] == "```" or sentence[-3:] == '```':
+        elif sentence[0:3] == "```" or sentence[-3:] == "```":
             continue
-        # if it is a link
         elif validators.url(str(sentence)):
             continue
 
@@ -147,11 +147,7 @@ async def process_messages(messages):
 
         sentence = [w for w in tokens if w not in stop_words]
 
-        # remove non alpha
-        # sentence = remove_non_alpha(sentence)
-
         for word in sentence:
-            # if it is a mention
             if sentence[0:2] == "<@":
                 continue
 
@@ -161,6 +157,27 @@ async def process_messages(messages):
             words.append(word.lower())
 
     return words
+
+def process_messages(messages, batch_size=1000, num_processes=8):
+    """Returns a list of all valid words when given a list of messages from the database."""
+    pool = Pool(processes=num_processes)
+    results = []
+
+    # Split messages into batches
+    message_batches = [messages[i:i+batch_size] for i in range(0, len(messages), batch_size)]
+
+    # Process batches concurrently
+    for batch in message_batches:
+        result = pool.apply_async(_process_batch, (batch,))
+        results.append(result)
+
+    # Collect results from all batches
+    words = []
+    for result in results:
+        words.extend(result.get())
+
+    return words
+
 
 
 async def get_top_words(db: DB, guild_id: int, user_id: int = None, channel_id: int = None, amount: int = 10):
@@ -198,7 +215,7 @@ async def get_top_words(db: DB, guild_id: int, user_id: int = None, channel_id: 
 
     res = [x[0] for x in res]
 
-    words = await process_messages(res)
+    words = process_messages(res)
 
     # words is a list of all words ever sent, make a list of the top words and their counts
     counts = collections.Counter(words)
