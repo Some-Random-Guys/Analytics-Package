@@ -261,7 +261,6 @@ class DB:
                         )
 
 
-
     async def remove_ignore(
             self, guild_id: int, channel_id: int = None, user_id: int = None
     ):
@@ -287,6 +286,7 @@ class DB:
                         "DELETE FROM `config` WHERE _key = 'user_ignore' AND data1 = %s AND data2 = %s;",
                         (guild_id, user_id),
                     )
+
 
     async def get_ignore_list(self, type_: str, guild_id: int = None) -> dict or list:
         if type_ not in ["channel", "user"]:
@@ -333,6 +333,7 @@ class DB:
             }
             return res
 
+
     async def add_user_alias(self, guild_id: int, user_id: int, alias_id: int, update_existing: bool = True):
         async with self.con.acquire() as conn:
             async with conn.cursor() as cur:
@@ -343,16 +344,23 @@ class DB:
                 if update_existing:
                     # replace all existing aliases with the new one
                     await cur.execute(
-                        f"UPDATE `{guild_id}` SET author_id = {user_id} WHERE author_id = {alias_id};"
+                        f"UPDATE `{guild_id}` SET aliased_author_id = {user_id} WHERE author_id = {alias_id};"
                     )
 
-    async def remove_user_alias(self, guild_id: int, user_id: int, alias_id: int):
+
+    async def remove_user_alias(self, guild_id: int, user_id: int, alias_id: int, update_existing: bool = True):
         async with self.con.acquire() as conn:
             async with conn.cursor() as cur:
                 await cur.execute(
                     "DELETE FROM `config` WHERE _key = 'alias' AND data1 = %s AND data2 = %s AND data3 = %s;",
                     (guild_id, user_id, alias_id),
                 )
+                if update_existing:
+                    # replace all existing aliases with the new one
+                    await cur.execute(
+                        f"UPDATE `{guild_id}` SET aliased_author_id = NULL WHERE author_id = {alias_id};"
+                    )
+
 
     async def get_user_aliases(self, guild_id: int = None):
         if guild_id is None:
