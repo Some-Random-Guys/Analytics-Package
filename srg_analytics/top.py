@@ -61,7 +61,12 @@ async def get_top_users(db: DB, guild_id: int, type_: str, amount: int = 10, tim
             return top[:amount]
 
     elif type_ == "words":
-        return await get_top_users_by_words(db=db, guild_id=guild_id, amount=amount, start_epoch=epoch_start.timestamp(), count_others=count_others)
+        if epoch_start is not None:
+            res = await get_top_users_by_words(db=db, guild_id=guild_id, amount=amount, start_epoch=epoch_start.timestamp(), count_others=count_others)
+        else:
+            res = await get_top_users_by_words(db=db, guild_id=guild_id, amount=amount, count_others=count_others)
+
+        return res
 
     elif type_ == "characters":
         query = f"""
@@ -105,7 +110,7 @@ async def get_top_users_visual(db: DB, guild_id: int, client, type_: str, timepe
             labels.append(f"{member.nick or member.display_name} | {i[1]}")
 
         except Exception:
-            labels.append(f"Unknown User | {i[1]}")
+            labels.append(f"Unknown ({i[0]}) | {i[1]}")
 
     pie, texts, autotexts = plt.pie([value for _, value in res], labels=labels, autopct="%1.1f%%")
 
