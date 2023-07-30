@@ -150,9 +150,16 @@ def _process_batch(messages):
         for word in sentence:
             if sentence[0:2] == "<@":
                 continue
-
             if len(word) <= 1:
                 continue
+            elif not word.isalpha():
+                continue    # Todo check if this is a good idea
+            # elif word[0:2] == "<@":
+            #     continue
+            # elif word[0:2] == "<!":
+            #     continue
+            # elif word[0:2] == "<#":
+            #     continue
 
             words.append(word.lower())
 
