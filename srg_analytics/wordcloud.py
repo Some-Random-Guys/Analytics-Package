@@ -1,4 +1,6 @@
 import random
+import time
+
 from wordcloud import WordCloud as wc
 import matplotlib.pyplot as plt
 import mplcyberpunk

@@ -271,7 +271,6 @@ async def activity_user_visual(db: DB, guild_id: int, user_list: list, time_peri
     try:
         # y is a dict of user_id: y_values
         for user_id, y_values in y.items():
-            print(x, y_values)
 
             plt.plot(x, y_values, "-o", label=f"{usernames[user_ids.index(user_id)]}")
 
@@ -299,11 +298,6 @@ async def activity_user_visual(db: DB, guild_id: int, user_list: list, time_peri
         print(e)
         plt.close()
         return None
-
-
-
-
-
 
 
 

@@ -1,5 +1,6 @@
 import time
 from collections import Counter
+from typing import Tuple, Any
 
 import nltk
 
@@ -69,7 +70,7 @@ async def most_mentioned(db: DB, guild_id: int, user_id: int) -> int or None:
     return most_common[0] if most_common else None
 
 
-async def most_mentioned_by(db: DB, guild_id: int, user_id: int) -> int:
+async def most_mentioned_by(db: DB, guild_id: int, user_id: int) -> tuple[Any, int]:
     """Returns the user who has mentioned the user the most, and the number of times mentioned."""
     mentions: list[int, list[int]] = await db.get_mentions_by(
         guild_id
