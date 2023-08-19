@@ -155,6 +155,7 @@ async def get_top_channels(db: DB, guild_id: int, type_: str, amount: int = 10):
             f"""
                 SELECT channel_id, COUNT(aliased_author_id) AS count
                 FROM `{guild_id}` WHERE is_bot = 0
+                AND message_content IS NOT NULL
                 GROUP BY channel_id
                 ORDER BY count DESC
                 LIMIT {amount};
@@ -169,7 +170,7 @@ async def get_top_channels(db: DB, guild_id: int, type_: str, amount: int = 10):
         res = await db.execute(
             f"""
                         SELECT channel_id, message_content
-                        FROM `{guild_id}` WHERE is_bot = 0
+                        FROM `{guild_id}` WHERE is_bot = 0 AND message_content IS NOT NULL
                     """, fetch="all"
         )
 
