@@ -221,7 +221,7 @@ async def activity_guild_visual(db: DB, guild_id: int, time_period: str, timezon
 
 
 async def activity_user(
-        db: DB, guild_id: int, user_list: list[int], time_period: str, timezone: datetime.timezone = None
+        db: DB, guild_id: int, user_list: list[int], time_period: str, include_server: bool, timezone: datetime.timezone = None
 ) -> tuple[tuple[Any, ...] | None, dict[int, list[Any]]]:
     # user_list is a list of user ids
 
@@ -240,7 +240,8 @@ async def activity_user(
             FROM 
                 `{guild_id}`
             WHERE
-                epoch >= %s AND epoch <= UNIX_TIMESTAMP() AND author_id = %s
+                epoch >= %s AND epoch <= UNIX_TIMESTAMP() 
+                AND author_id = %s
             GROUP BY
                 datetime
         """
@@ -259,19 +260,47 @@ async def activity_user(
             x_labels = tuple(x)
         y_values[user_id] = y
 
+    if include_server:
+        # Define the SQL query template
+        query_template = f"""
+            SELECT 
+                DATE_FORMAT(FROM_UNIXTIME(epoch), %s) AS datetime, 
+                COUNT(*) AS count
+            FROM 
+                `{guild_id}`            
+            WHERE
+                epoch >= %s AND epoch <= UNIX_TIMESTAMP()
+                
+            GROUP BY
+                datetime
+        """
+
+        # Define the query parameters
+        query_params = (label_format.replace("%M", "%i"), start_time.timestamp(),)
+
+        # Execute the SQL query
+        data = await db.execute(query_template, query_params, fetch="all")
+
+        # Structure the data
+        x, y = await _structure_data(data, start_time, time_period, label_format, timezone)
+
+        # Add the data to the graph
+        if x_labels is None:
+            x_labels = tuple(x)
+        y_values["Server"] = y
+
     return x_labels, y_values
 
-async def activity_user_visual(db: DB, guild_id: int, user_list: list, time_period: str, timezone: datetime.timezone = None):
+async def activity_user_visual(db: DB, guild_id: int, user_list: list, time_period: str, include_server: bool, timezone: datetime.timezone = None):
 
     usernames = [user[0] for user in user_list]
     user_ids = [user[1] for user in user_list]
 
-    x, y = await activity_user(db, guild_id, user_ids, time_period, timezone)
+    x, y = await activity_user(db, guild_id, user_ids, time_period, include_server, timezone)
     plt.style.use("cyberpunk")
     try:
         # y is a dict of user_id: y_values
         for user_id, y_values in y.items():
-
             plt.plot(x, y_values, "-o", label=f"{usernames[user_ids.index(user_id)]}")
 
         # Add labels and title
