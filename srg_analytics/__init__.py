@@ -7,3 +7,4 @@ from .top import *
 from .profile import *
 from .export import *
 from .profile import build_profile
+from .leaderboard import *
