@@ -87,10 +87,7 @@ async def get_top_users(db: DB, guild_id: int, type_: str, amount: int = 10, tim
 
         top =  await db.execute(query, fetch="all")
 
-        if count_others:
-            return [*top[:amount], ('others', sum([i[1] for i in top[amount:]]))]
-        else:
-            return top[:amount]
+        return top[:amount]
 
 
 async def get_top_users_visual(db: DB, guild_id: int, client, type_: str, timeperiod: str, amount: int = 10) -> str:
