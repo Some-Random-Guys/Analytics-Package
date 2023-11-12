@@ -60,11 +60,6 @@ async def _generate_timeperiod(time_period, timezone: datetime.timezone = None):
 
 async def _structure_data(data, start_time, time_period, label_format, timezone: datetime.timezone = None):
     # Group the data by the specified interval (hourly, daily, etc.)
-    grouped_data = {}
-    for row in data:
-        group_key = row[0]
-        grouped_data.setdefault(group_key, 0)
-        grouped_data[group_key] += row[1]
 
     # Fill in missing data points with 0
     if time_period == '1d':
@@ -241,7 +236,7 @@ async def activity_user(
                 `{guild_id}`
             WHERE
                 epoch >= %s AND epoch <= UNIX_TIMESTAMP() 
-                AND author_id = %s
+                AND aliased_author_id = %s
             GROUP BY
                 datetime
         """
