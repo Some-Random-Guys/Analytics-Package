@@ -141,7 +141,7 @@ async def get_top_users_visual(db: DB, guild_id: int, client, type_: str, timepe
     except Exception as e:
         print(e)
 
-    plt.close()  # todo fix /UserWarning: Glyph 128017 (\N{SHEEP}) missing from current font.
+    plt.close()
 
     return name
 
@@ -222,3 +222,45 @@ async def get_top_channels_visual(db: DB, guild_id: int, client, type_: str, amo
     plt.close()
 
     return name
+
+
+async def get_user_top_date(db: DB, guild_id: int, user_id: int, amount: int = 10):
+    res = await db.execute(
+        f"""
+    SELECT
+        UNIX_TIMESTAMP(CONCAT(DATE_FORMAT(FROM_UNIXTIME(epoch), '%Y-%m-%d'), ' 00:00:00')) AS start_of_day_epoch,
+        COUNT(*) AS count
+    FROM
+        `{guild_id}`
+    WHERE
+        epoch <= UNIX_TIMESTAMP()
+        AND aliased_author_id = {user_id}
+    GROUP BY
+        start_of_day_epoch
+    ORDER BY
+        count DESC
+    LIMIT {amount};
+    """, fetch="all"
+    )
+
+    return res
+
+async def get_server_top_date(db: DB, guild_id: int, amount: int = 10):
+    res = await db.execute(
+        f"""
+    SELECT
+        UNIX_TIMESTAMP(CONCAT(DATE_FORMAT(FROM_UNIXTIME(epoch), '%Y-%m-%d'), ' 00:00:00')) AS start_of_day_epoch,
+        COUNT(*) AS count
+    FROM
+        `{guild_id}`
+    WHERE
+        epoch <= UNIX_TIMESTAMP()
+    GROUP BY
+        start_of_day_epoch
+    ORDER BY
+        count DESC
+    LIMIT {amount};
+    """, fetch="all"
+    )
+
+    return res
