@@ -35,19 +35,18 @@ async def _generate_timeperiod(time_period, timezone: datetime.timezone = None):
     periods = {
         # todo this will take days=30 for some reason when if it's set to anything else in 3m and above when format is %d-%m
         '1d': (now.replace(hour=0, minute=0, second=0, microsecond=0), '%H'),
-        '3d': (now - datetime.timedelta(days=_days['3d'][0]), '%d-%m'),
-        '5d': (now - datetime.timedelta(days=_days['5d'][0]), '%d-%m'),
-        '1w': (now - datetime.timedelta(days=_days['1w'][0]), '%d-%m'),
-        '2w': (now - datetime.timedelta(days=_days['2w'][0]), '%d-%m'),
-        '1m': (now - datetime.timedelta(days=_days['1m'][0]), '%d-%m'),
-        '3m': (now - datetime.timedelta(days=_days['3m'][0]), '%m-%Y'),
-        '6m': (now - datetime.timedelta(days=_days['6m'][0]), '%m-%Y'),
-        '9m': (now - datetime.timedelta(days=_days['9m'][0]), '%m-%Y'),
-        '1y': (now - datetime.timedelta(days=_days['1y'][0]), '%m-%Y'),
-        '2y': (now - datetime.timedelta(days=_days['2y'][0]), '%m-%Y'),
-        '3y': (now - datetime.timedelta(days=_days['3y'][0]), '%Y'),
-        '5y': (now - datetime.timedelta(days=_days['5y'][0]), '%Y'),
-        'all': (datetime.datetime(2015, 4, 1, tzinfo=timezone), '%Y')
+        '5d': (now - datetime.timedelta(days=_days['5d'][0]), '%d-%m-%Y'),
+        '1w': (now - datetime.timedelta(days=_days['1w'][0]), '%d-%m-%Y'),
+        '2w': (now - datetime.timedelta(days=_days['2w'][0]), '%d-%m-%Y'),
+        '1m': (now - datetime.timedelta(days=_days['1m'][0]), '%d-%m-%Y'),
+        '3m': (now - datetime.timedelta(days=_days['3m'][0]), '%d-%m-%Y'),
+        '6m': (now - datetime.timedelta(days=_days['6m'][0]), '%d-%m-%Y'),
+        '9m': (now - datetime.timedelta(days=_days['9m'][0]), '%d-%m-%Y'),
+        '1y': (now - datetime.timedelta(days=_days['1y'][0]), '%d-%m-%Y'),
+        '2y': (now - datetime.timedelta(days=_days['2y'][0]), '%d-%m-%Y'),
+        '3y': (now - datetime.timedelta(days=_days['3y'][0]), '%d-%Y'),
+        '5y': (now - datetime.timedelta(days=_days['5y'][0]), '%d-%Y'),
+        'all': (datetime.datetime(2015, 4, 1, tzinfo=timezone), '%d-%Y')
     }
 
     try:
@@ -60,6 +59,11 @@ async def _generate_timeperiod(time_period, timezone: datetime.timezone = None):
 
 async def _structure_data(data, start_time, time_period, label_format, timezone: datetime.timezone = None):
     # Group the data by the specified interval (hourly, daily, etc.)
+    grouped_data = {}
+    for row in data:
+        group_key = row[0]
+        grouped_data.setdefault(group_key, 0)
+        grouped_data[group_key] += row[1]
 
     # Fill in missing data points with 0
     if time_period == '1d':
@@ -236,7 +240,7 @@ async def activity_user(
                 `{guild_id}`
             WHERE
                 epoch >= %s AND epoch <= UNIX_TIMESTAMP() 
-                AND aliased_author_id = %s
+                AND author_id = %s
             GROUP BY
                 datetime
         """
