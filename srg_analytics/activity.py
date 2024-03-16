@@ -67,75 +67,13 @@ async def _structure_data(data, start_time, time_period, label_format, timezone:
 
     # Fill in missing data points with 0
     if time_period == '1d':
-        for i in range(24):
+        for i in range(_days[time_period][1]):
             key = (start_time + datetime.timedelta(hours=i)).strftime(label_format)
-            grouped_data.setdefault(key, 0)
-
-    elif time_period == '3d':
-        for i in range(3):
+    else:
+        for i in range(_days[time_period][1]):
             key = (start_time + datetime.timedelta(days=i)).strftime(label_format)
-            grouped_data.setdefault(key, 0)
 
-    elif time_period == '5d':
-        for i in range(5):
-            key = (start_time + datetime.timedelta(days=i)).strftime(label_format)
-            grouped_data.setdefault(key, 0)
-
-    elif time_period == '1w':
-        for i in range(7):
-            key = (start_time + datetime.timedelta(days=i)).strftime(label_format)
-            grouped_data.setdefault(key, 0)
-
-    elif time_period == '2w':
-        for i in range(14):
-            key = (start_time + datetime.timedelta(days=i)).strftime(label_format)
-            grouped_data.setdefault(key, 0)
-
-    elif time_period == '1m':
-        for i in range(30):
-            key = (start_time + datetime.timedelta(days=i)).strftime(label_format)
-            grouped_data.setdefault(key, 0)
-
-    elif time_period == '3m':
-        for i in range(90):
-            key = (start_time + datetime.timedelta(days=i)).strftime(label_format)
-            grouped_data.setdefault(key, 0)
-
-    elif time_period == '6m':
-        for i in range(180):
-            key = (start_time + datetime.timedelta(days=i)).strftime(label_format)
-            grouped_data.setdefault(key, 0)
-
-    elif time_period == '9m':
-        for i in range(270):
-            key = (start_time + datetime.timedelta(days=i)).strftime(label_format)
-            grouped_data.setdefault(key, 0)
-
-    elif time_period == '1y':
-        for i in range(365):
-            key = (start_time + datetime.timedelta(days=i)).strftime(label_format)
-            grouped_data.setdefault(key, 0)
-
-    elif time_period == '2y':
-        for i in range(730):
-            key = (start_time + datetime.timedelta(days=i)).strftime(label_format)
-            grouped_data.setdefault(key, 0)
-
-    elif time_period == '3y':
-        for i in range(1095):
-            key = (start_time + datetime.timedelta(days=i)).strftime(label_format)
-            grouped_data.setdefault(key, 0)
-
-    elif time_period == '5y':
-        for i in range(1825):
-            key = (start_time + datetime.timedelta(days=i)).strftime(label_format)
-            grouped_data.setdefault(key, 0)
-
-    elif time_period == 'all':
-        for i in range(365 * 5):
-            key = (start_time + datetime.timedelta(days=i)).strftime(label_format)
-            grouped_data.setdefault(key, 0)
-
+    grouped_data.setdefault(key, 0)
 
     # Sort the data by date
     sorted_data = sorted(grouped_data.items(), key=lambda x: datetime.datetime.strptime(x[0], label_format))
