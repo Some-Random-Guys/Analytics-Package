@@ -462,7 +462,6 @@ class DB:
         return res[0]
 
 
-
     # analysis functions
     async def get_message_count(
             self, guild_id: int, channel_id: int = None, user_id: int = None
@@ -470,45 +469,32 @@ class DB:
         if guild_id is None:
             raise ValueError("guild_id cannot be None")
 
-        if channel_id is None and user_id is None:
-            async with self.con.acquire() as conn:
-                async with conn.cursor() as cur:
+        async with self.con.acquire() as conn:
+            async with conn.cursor() as cur:
+                if channel_id is None and user_id is None:
                     await cur.execute(
                         f"SELECT COUNT(*) FROM `{guild_id}`",
                     )
-
-                    return (await cur.fetchone())[0]
-
-        elif channel_id is not None and user_id is None:
-            async with self.con.acquire() as conn:
-                async with conn.cursor() as cur:
+                elif channel_id is not None and user_id is None:
                     await cur.execute(
                         f"SELECT COUNT(*) FROM `{guild_id}` WHERE channel_id = %s;",
                         (channel_id,),
                     )
-
-                    return (await cur.fetchone())[0]
-
-        elif channel_id is None and user_id is not None:
-            async with self.con.acquire() as conn:
-                async with conn.cursor() as cur:
+                elif channel_id is None and user_id is not None:
                     await cur.execute(
                         f"SELECT COUNT(*) FROM `{guild_id}` WHERE author_id = %s;",
                         (user_id,),
                     )
-
-                    return (await cur.fetchone())[0]
-
-        else:
-            async with self.con.acquire() as conn:
-                async with conn.cursor() as cur:
+                else:
                     await cur.execute(
                         f"SELECT COUNT(*) FROM `{guild_id}` WHERE channel_id = %s AND author_id = %s;",
                         (channel_id, user_id),
                     )
+                
+                return (await cur.fetchone())[0]
 
-                    return (await cur.fetchone())[0]
 
+    
     async def get_mentions(self, guild_id: int, user_id: int) -> list[int]:
         """Returns all the instances where mentions are not empty, where user_id;"""
         if user_id is not None:
@@ -548,45 +534,31 @@ class DB:
         return data
 
     async def get_message_content(self, guild_id: int, channel_id: int = None, user_id: int = None) -> list[str]:
-        if channel_id is None and user_id is None:
-            async with self.con.acquire() as conn:
-                async with conn.cursor() as cur:
+        async with self.con.acquire() as conn:
+            async with conn.cursor() as cur:
+
+                if channel_id is None and user_id is None:
                     await cur.execute(
                         f"SELECT message_content FROM `{guild_id}` WHERE message_content IS NOT NULL;",
                     )
-
-                    res = await cur.fetchall()
-
-        elif channel_id is not None and user_id is None:
-            async with self.con.acquire() as conn:
-                async with conn.cursor() as cur:
+                elif channel_id is not None and user_id is None:
                     await cur.execute(
                         f"SELECT message_content FROM `{guild_id}` WHERE channel_id = %s AND message_content IS NOT "
                         f"NULL;",
                         (channel_id,),
                     )
-
-                    res = await cur.fetchall()
-
-        elif channel_id is None and user_id is not None:
-            async with self.con.acquire() as conn:
-                async with conn.cursor() as cur:
+                elif channel_id is None and user_id is not None:
                     await cur.execute(
                         f"SELECT message_content FROM `{guild_id}` WHERE author_id = %s AND message_content IS NOT NULL;",
                         (user_id,),
                     )
-
-                    res = await cur.fetchall()
-
-        else:
-            async with self.con.acquire() as conn:
-                async with conn.cursor() as cur:
+                else:
                     await cur.execute(
                         f"SELECT message_content FROM `{guild_id}` WHERE channel_id = %s AND author_id = %s AND "
                         f"message_content IS NOT NULL;",
                         (channel_id, user_id),
                     )
 
-                    res = await cur.fetchall()
+                res = await cur.fetchall()
 
         return [(message_content[0]).decode("utf-8") for message_content in res]
