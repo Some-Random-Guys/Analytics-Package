@@ -19,7 +19,7 @@ _days = {
         '9m': (270, 9),
         '1y': (365, 12),
         '2y': (730, 24),
-        '3y': (1095, 3),
+        '3y': (1095, 36),
         '5y': (1825, 5),
     }
 
@@ -39,14 +39,14 @@ async def _generate_timeperiod(time_period, timezone: datetime.timezone = None):
         '1w': (now - datetime.timedelta(days=_days['1w'][0]), '%d-%m-%Y'),
         '2w': (now - datetime.timedelta(days=_days['2w'][0]), '%d-%m-%Y'),
         '1m': (now - datetime.timedelta(days=_days['1m'][0]), '%d-%m-%Y'),
-        '3m': (now - datetime.timedelta(days=_days['3m'][0]), '%d-%m-%Y'),
-        '6m': (now - datetime.timedelta(days=_days['6m'][0]), '%d-%m-%Y'),
-        '9m': (now - datetime.timedelta(days=_days['9m'][0]), '%d-%m-%Y'),
-        '1y': (now - datetime.timedelta(days=_days['1y'][0]), '%d-%m-%Y'),
-        '2y': (now - datetime.timedelta(days=_days['2y'][0]), '%d-%m-%Y'),
-        '3y': (now - datetime.timedelta(days=_days['3y'][0]), '%d-%Y'),
-        '5y': (now - datetime.timedelta(days=_days['5y'][0]), '%d-%Y'),
-        'all': (datetime.datetime(2015, 4, 1, tzinfo=timezone), '%d-%Y')
+        '3m': (now - datetime.timedelta(days=_days['3m'][0]), '%m-%Y'),
+        '6m': (now - datetime.timedelta(days=_days['6m'][0]), '%m-%Y'),
+        '9m': (now - datetime.timedelta(days=_days['9m'][0]), '%m-%Y'),
+        '1y': (now - datetime.timedelta(days=_days['1y'][0]), '%m-%Y'),
+        '2y': (now - datetime.timedelta(days=_days['2y'][0]), '%m-%Y'),
+        '3y': (now - datetime.timedelta(days=_days['3y'][0]), '%m-%Y'),
+        '5y': (now - datetime.timedelta(days=_days['5y'][0]), '%Y'),
+        'all': (datetime.datetime(2015, 4, 1, tzinfo=timezone), '%Y')
     }
 
     try:
@@ -326,6 +326,3 @@ async def activity_user_visual(db: DB, guild_id: int, user_list: list, time_peri
         print(e)
         plt.close()
         return None
-
-
-
