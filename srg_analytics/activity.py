@@ -66,14 +66,13 @@ async def _structure_data(data, start_time, time_period, label_format, timezone:
         grouped_data[group_key] += row[1]
 
     # Fill in missing data points with 0
-    if time_period == '1d':
-        for i in range(_days[time_period][1]):
+    for i in range(_days[time_period][1]):
+        if time_period == '1d':
             key = (start_time + datetime.timedelta(hours=i)).strftime(label_format)
-    else:
-        for i in range(_days[time_period][1]):
+        else:
             key = (start_time + datetime.timedelta(days=i)).strftime(label_format)
 
-    grouped_data.setdefault(key, 0)
+        grouped_data.setdefault(key, 0)
 
     # Sort the data by date
     sorted_data = sorted(grouped_data.items(), key=lambda x: datetime.datetime.strptime(x[0], label_format))
