@@ -90,39 +90,128 @@ async def _structure_data(data, start_time, time_period, label_format, timezone:
 
     return x, y
 
+async def _structure_daterange(data, start_date, end_date, date_format, timezone):
+    # data = {'date': value, ...}
+    
+    if date_format == '%d-%m-%Y':
+        # Fill in all missing dates between start_date and end_date
+        dates = 0
+        delta = datetime.timedelta(days=1)
 
-async def activity_guild(db, guild_id, time_period, timezone: datetime.timezone = None):
+        while start_date <= end_date:
+            dates += 1 
+            start_date += delta
 
-    now, start_time, label_format = await _generate_timeperiod(time_period, timezone)
+        grouped_data = {}
+        
+        for row in data:
+            group_key = row[0]
+            grouped_data.setdefault(group_key, 0)
+            grouped_data[group_key] += row[1]
 
-    # Define the SQL query template
-    query_template = f"""
+        # Fill in missing data points with 0
+        for i in range(dates):
+            key = (start_date + datetime.timedelta(days=i))
+            if key.date() > end_date.date():
+                break
+            
+            key = key.strftime(date_format)
+            grouped_data.setdefault(key, 0)
+
+        # Sort the data by date
+        sorted_data = sorted(grouped_data.items(), key=lambda x: datetime.datetime.strptime(x[0], date_format))
+
+        _last_sorted_date = datetime.datetime.strptime(sorted_data[-1][0], date_format)
+        if _last_sorted_date.date() != end_date.date():
+            sorted_data.pop()
+
+        # Split the data into x and y values
+        x = [row[0] for row in sorted_data]
+        y = [row[1] for row in sorted_data]
+
+        return x, y
+        
+    else:
+        # Get all months between start_date and end_date
+        pass
+            
+    
+    
+    
+
+
+async def activity_guild(db, guild_id, timeperiod_or_daterange: str | tuple | list, timezone: datetime.timezone = None):
+    print(type(timeperiod_or_daterange))
+    if type(timeperiod_or_daterange) in [tuple, list]:
+        print("e")
+        date_range = timeperiod_or_daterange
+        # A daterange has been passed 
+        # Format - ("dd-mm-yyyy", "dd-mm-yyyy")
+        #             start         end
+
+        date_format = '%d-%m-%Y'
+        
+        start_time = datetime.datetime.strptime(date_range[0], date_format)
+        end_time = datetime.datetime.strptime(date_range[1], date_format)
+        end_time = datetime.datetime.combine(end_time, datetime.time.max)
+
+
+        query_template = f"""
         SELECT 
             DATE_FORMAT(FROM_UNIXTIME(epoch), %s) AS datetime, 
             COUNT(*) AS count 
         FROM 
             `{guild_id}` 
         WHERE 
-            epoch >= %s AND epoch <= UNIX_TIMESTAMP() 
+            epoch >= %s AND epoch <= %s 
         GROUP BY 
             datetime
-    """
+        """
 
-    # Define the query parameters
-    query_params = (label_format.replace("%M", "%i"), start_time.timestamp(),)
+        # Define the query parameters
+        query_params = (date_format.replace("%M", "%i"), start_time.timestamp(), end_time.timestamp())
 
-    # Execute the SQL query
-    data = await db.execute(query_template, query_params, fetch="all")
+        # Execute the SQL query
+        data = await db.execute(query_template, query_params, fetch="all")
 
-    # Structure the data
-    x_labels, y_values = await _structure_data(data, start_time, time_period, label_format, timezone)
+        # Structure the data
+        x_labels, y_values = await _structure_daterange(data, start_time, end_time, date_format, timezone)
 
+    elif type(timeperiod_or_daterange) is str: 
+        print("f")
+        time_period = timeperiod_or_daterange
+        now, start_time, date_format = await _generate_timeperiod(time_period, timezone)
+
+        # Define the SQL query template
+        query_template = f"""
+            SELECT 
+                DATE_FORMAT(FROM_UNIXTIME(epoch), %s) AS datetime, 
+                COUNT(*) AS count 
+            FROM 
+                `{guild_id}` 
+            WHERE 
+                epoch >= %s AND epoch <= UNIX_TIMESTAMP() 
+            GROUP BY 
+                datetime
+        """
+
+        # Define the query parameters
+        query_params = (date_format.replace("%M", "%i"), start_time.timestamp(),)
+
+        # Execute the SQL query
+        data = await db.execute(query_template, query_params, fetch="all")
+
+        # Structure the data
+        x_labels, y_values = await _structure_data(data, start_time, time_period, date_format, timezone)
+
+    
+    print(x_labels, y_values)
     return x_labels, y_values
 
 
 
-async def activity_guild_visual(db: DB, guild_id: int, time_period: str, timezone: datetime.timezone = None):
-    x, y = await activity_guild(db, guild_id, time_period, timezone)
+async def activity_guild_visual(db: DB, guild_id: int, timeperiod_or_daterange: list | tuple | str, timezone: datetime.timezone = None):
+    x, y = await activity_guild(db, guild_id, timeperiod_or_daterange, timezone)
     plt.style.use("cyberpunk")
 
     try:
@@ -132,7 +221,7 @@ async def activity_guild_visual(db: DB, guild_id: int, time_period: str, timezon
         # Add labels and title
         plt.xlabel("Timeperiod")
         plt.ylabel('Message Count')
-        plt.title(f'Activity Graph ({time_period})')
+        plt.title(f'Activity Graph ({timeperiod_or_daterange})')
 
         # Rotate x-axis labels
         plt.xticks(rotation=45)
