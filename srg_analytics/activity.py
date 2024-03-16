@@ -1,9 +1,10 @@
 import random
 from typing import Any
-
+import calendar
 from .DB import DB
 import mplcyberpunk
 import datetime
+from dateutil.relativedelta import relativedelta
 import matplotlib.pyplot as plt
 
 _days = {
@@ -90,18 +91,32 @@ async def _structure_data(data, start_time, time_period, label_format, timezone:
 
     return x, y
 
+async def _get_number_of_dates_in_range(start_date, end_date):
+    dates = 0
+    delta = datetime.timedelta(days=1)
+
+    while start_date <= end_date:
+        dates += 1 
+        start_date += delta
+
+    return dates # inclusive of starting and ending date
+
+async def _get_number_of_months_in_range(start_date, end_date):
+    months = 0
+    delta = relativedelta(months=1)
+
+    while start_date <= end_date:
+        months += 1 
+        start_date += delta
+
+    return months # inclusive of starting and ending month
+
 async def _structure_daterange(data, start_date, end_date, date_format, timezone):
     # data = {'date': value, ...}
     
     if date_format == '%d-%m-%Y':
         # Fill in all missing dates between start_date and end_date
-        dates = 0
-        delta = datetime.timedelta(days=1)
-
-        while start_date <= end_date:
-            dates += 1 
-            start_date += delta
-
+        dates = await _get_number_of_dates_in_range(start_date, end_date)
         grouped_data = {}
         
         for row in data:
@@ -131,12 +146,41 @@ async def _structure_daterange(data, start_date, end_date, date_format, timezone
 
         return x, y
         
-    else:
+    elif date_format == '%m-%Y':        
+        _last_day = (calendar.monthrange(end_date.year, end_date.month))[1]
+        end_date = datetime.date(end_date.year, end_date.month, _last_day)
+        end_date = datetime.datetime.combine(end_date, datetime.time.max)
+
         # Get all months between start_date and end_date
-        pass
+        months = await _get_number_of_months_in_range(start_date, end_date)
+        grouped_data = {}
+        
+        for row in data:
+            group_key = row[0]
+            grouped_data.setdefault(group_key, 0)
+            grouped_data[group_key] += row[1]
+
+        # Fill in missing data points with 0
+        for i in range(months):
+            key = start_date + relativedelta(months=1)
+            if key.date() > end_date.date():
+                break
             
-    
-    
+            key = key.strftime(date_format)
+            grouped_data.setdefault(key, 0)
+
+        # Sort the data by date
+        sorted_data = sorted(grouped_data.items(), key=lambda x: datetime.datetime.strptime(x[0], date_format))
+
+        _last_sorted_date = datetime.datetime.strptime(sorted_data[-1][0], date_format)
+        if _last_sorted_date.date() != end_date.date():
+            sorted_data.pop()
+
+        # Split the data into x and y values
+        x = [row[0] for row in sorted_data]
+        y = [row[1] for row in sorted_data]
+
+        return x, y
     
 
 
@@ -149,12 +193,14 @@ async def activity_guild(db, guild_id, timeperiod_or_daterange: str | tuple | li
         # Format - ("dd-mm-yyyy", "dd-mm-yyyy")
         #             start         end
 
-        date_format = '%d-%m-%Y'
+        if len(date_range[0].split("-")) == 3:
+            date_format = '%d-%m-%Y'
+        else:
+            date_format = '%m-%Y'
         
         start_time = datetime.datetime.strptime(date_range[0], date_format)
         end_time = datetime.datetime.strptime(date_range[1], date_format)
         end_time = datetime.datetime.combine(end_time, datetime.time.max)
-
 
         query_template = f"""
         SELECT 
@@ -178,7 +224,6 @@ async def activity_guild(db, guild_id, timeperiod_or_daterange: str | tuple | li
         x_labels, y_values = await _structure_daterange(data, start_time, end_time, date_format, timezone)
 
     elif type(timeperiod_or_daterange) is str: 
-        print("f")
         time_period = timeperiod_or_daterange
         now, start_time, date_format = await _generate_timeperiod(time_period, timezone)
 
