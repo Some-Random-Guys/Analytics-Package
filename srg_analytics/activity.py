@@ -175,8 +175,8 @@ async def _structure_daterange(data, start_date, end_date, date_format, timezone
         sorted_data = sorted(grouped_data.items(), key=lambda x: datetime.datetime.strptime(x[0], date_format))
 
         _last_sorted_date = datetime.datetime.strptime(sorted_data[-1][0], date_format)
-        if _last_sorted_date.date() != end_date.date():
-            sorted_data.pop()
+        # if _last_sorted_date.date() != end_date.date():
+        #     sorted_data.pop()
 
         # Split the data into x and y values
         x = [row[0] for row in sorted_data]
@@ -194,12 +194,18 @@ async def activity_guild(db, guild_id, timeperiod_or_daterange: str | tuple | li
 
         if len(date_range[0].split("-")) == 3:
             date_format = '%d-%m-%Y'
+            end_time = datetime.datetime.strptime(date_range[1], date_format)
         else:
             date_format = '%m-%Y'
+            end_time = datetime.datetime.strptime(date_range[1], date_format) + relativedelta(months=1) - relativedelta(days=1) # todo check if works as intended
 
         start_time = datetime.datetime.strptime(date_range[0], date_format)
-        end_time = datetime.datetime.strptime(date_range[1], date_format)
         end_time = datetime.datetime.combine(end_time, datetime.time.max)
+
+        print(end_time)
+        # end_time = datetime.datetime.combine(end_time, datetime.time.max)
+        # print(end_time)
+        print(end_time.timestamp())
 
         query_template = f"""
         SELECT 
@@ -332,8 +338,6 @@ async def activity_user(
 
             # Structure the data
             x, y = await _structure_daterange(data, start_time, end_time, date_format, timezone)
-            print(x)
-            print(y)
 
             # Add the data to the graph
             if x_labels is None:
