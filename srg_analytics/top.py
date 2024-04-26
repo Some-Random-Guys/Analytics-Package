@@ -9,7 +9,9 @@ from collections import Counter
 from .DB import DB
 from .helpers import get_top_users_by_words, get_top_channels_by_words
 
-async def get_top_users(db: DB, guild_id: int, type_: str, amount: int = 10, timeperiod: str = None, count_others: bool = True):
+
+async def get_top_users(db: DB, guild_id: int, type_: str, amount: int = 10, timeperiod: str = None,
+                        count_others: bool = True):
     # type_ can be either "messages" or "words" or "characters"
     # time_duration can be either "day" or "week" or "month" or "year" or None
 
@@ -64,7 +66,8 @@ async def get_top_users(db: DB, guild_id: int, type_: str, amount: int = 10, tim
 
     elif type_ == "words":
         if epoch_start is not None:
-            res = await get_top_users_by_words(db=db, guild_id=guild_id, amount=amount, start_epoch=epoch_start.timestamp(), count_others=count_others)
+            res = await get_top_users_by_words(db=db, guild_id=guild_id, amount=amount,
+                                               start_epoch=epoch_start.timestamp(), count_others=count_others)
         else:
             res = await get_top_users_by_words(db=db, guild_id=guild_id, amount=amount, count_others=count_others)
 
@@ -80,12 +83,12 @@ async def get_top_users(db: DB, guild_id: int, type_: str, amount: int = 10, tim
         if timeperiod is not None:
             query += f"AND epoch >= {epoch_start.timestamp()}"
 
-        query +=  """
+        query += """
                 GROUP BY aliased_author_id
                 ORDER BY count DESC
                 """
 
-        top =  await db.execute(query, fetch="all")
+        top = await db.execute(query, fetch="all")
 
         return top[:amount]
 
@@ -227,23 +230,23 @@ async def get_top_channels_visual(db: DB, guild_id: int, client, type_: str, amo
 async def get_user_top_date(db: DB, guild_id: int, user_id: int, amount: int = 10):
     res = await db.execute(
         f"""
-    SELECT
-        UNIX_TIMESTAMP(CONCAT(DATE_FORMAT(FROM_UNIXTIME(epoch), '%Y-%m-%d'), ' 00:00:00')) AS start_of_day_epoch,
-        COUNT(*) AS count
-    FROM
-        `{guild_id}`
-    WHERE
-        epoch <= UNIX_TIMESTAMP()
-        AND aliased_author_id = {user_id}
-    GROUP BY
-        start_of_day_epoch
-    ORDER BY
-        count DESC
-    LIMIT {amount};
+            SELECT
+                UNIX_TIMESTAMP(CONCAT(DATE_FORMAT(FROM_UNIXTIME(epoch), '%Y-%m-%d'), ' 00:00:00')) AS start_of_day_epoch,
+                COUNT(CASE WHEN aliased_author_id = {user_id} THEN 1 ELSE NULL END) AS count,
+                COUNT(*) AS total_count
+            FROM
+                `{guild_id}`
+            WHERE
+                epoch <= UNIX_TIMESTAMP()
+            GROUP BY
+                start_of_day_epoch
+            ORDER BY
+                count DESC
+            LIMIT {amount};
     """, fetch="all"
     )
-
     return res
+
 
 async def get_server_top_date(db: DB, guild_id: int, amount: int = 10):
     res = await db.execute(
