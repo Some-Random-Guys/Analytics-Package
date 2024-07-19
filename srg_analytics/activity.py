@@ -7,6 +7,8 @@ import datetime
 from dateutil.relativedelta import relativedelta
 import matplotlib.pyplot as plt
 
+
+
 _days = {
     # format - timeperiod: (days, number of data points)
     '1d': (1, 24),
@@ -22,6 +24,7 @@ _days = {
     '2y': (730, 24),
     '3y': (1095, 36),
     '5y': (1825, 5),
+    'all': (lambda:  [(datetime.date(2015, 4, 1) - datetime.date.today()).days, datetime.date.today().year - 2015])()
 }
 
 
@@ -155,6 +158,7 @@ async def _structure_daterange(data, start_date, end_date, date_format, timezone
 
         # Get all months between start_date and end_date
         months = await _get_number_of_months_in_range(start_date, end_date)
+        print(months)
         grouped_data = {}
 
         for row in data:
